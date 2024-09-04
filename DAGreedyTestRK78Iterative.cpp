@@ -21,7 +21,6 @@ int main( void )
         u_Nom[i]   = 0.0;
     }
     
-    
     AlgebraicVector<double> xp_tf(6), xs_tf(6);                         // Initialise primary and seconday object states at tCA
     
     double MuEarth = 398600;                                            // Gravitational parameter of the Earth     [km^3/s^2]
@@ -49,7 +48,7 @@ int main( void )
     xs_tf = RK78(6, xs_t0, {0.0, 0.0, 0.0}, 0.0, tCA_Nom,TBAcc,MuEarth,Lsc);      // Propagation till nominal tca (secondary)
 
     int N;                                                              // Initialise number of thrust arcs in the method 
-    N = 10;                                                             // Number should have a relation with the eccentricity of the orbit
+    N = 100;                                                             // Number should have a relation with the eccentricity of the orbit
     // TODO: Connect N with RTN profile of control; make adaptive
 
     DA EucDis;                                                          // Initialise DA variable Euclidean distance
@@ -73,7 +72,7 @@ int main( void )
         for (i=0; i<3; i++){
             rp_tn_DA[i] = xp_tn_Vec[i]   + DA(i+1);                                  // Make the primary position a DA object with (3) independent DA variables
             vp_tn_DA[i] = xp_tn_Vec[i+3] + DA(i+4);                                  // Make the primary velocity a DA object with (3) independent DA variables
-            u_tn[i]  = DA(i+7);                                                      // Make the control acting on the primary a DA object with (3) independent DA variables
+            u_tn[i]     = DA(i+7);                                   // Make the control acting on the primary a DA object with (3) independent DA variables
         }
         // Propagate rptn, vptn to tf + delta tCA
         AlgebraicVector<DA> xp_tn_DA(6), xs_tn_DA(6);                                // Initialise primary, secondary state at t(n) as DA object 
@@ -102,14 +101,14 @@ int main( void )
         AlgebraicVector<double> xp_tnp1_Vec(6);                                                                     // Initialise primary state at t(n+1) as vector object (for validation)
 
         double StepSizeN = static_cast<double>(1)/N;
-        // States at tf
+        // States at t(n+1)
         xp_tnp1_DA  = RK78(6, xp_tn_DA,  {u_Nom[0] + u_tn[0], u_Nom[1] + u_tn[1], u_Nom[2] + u_tn[2]}, 0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc); // Propagation from t(n) to t(n+1) of DA object primary
-        xp_tnp1_Vec = RK78(6, xp_tn_Vec, {u_Nom[0], u_Nom[1], u_Nom[2]},                               0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc); // Propagation from t(n) to t(n+1) of vector object primary
         xs_tnp1_Vec = RK78(6, xs_tn_Vec, {0.0, 0.0, 0.0},                                              0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc); // Propagation from t(n) to t(n+1) of vector object secondary
 
         AlgebraicVector<double> xp_tnp1_Val_T(6), xp_tnp1_Val_R(6);                                                 // Initialise primary state at t(n+1) as vector object (for validation)
         xp_tnp1_Val_R = RK78(6, xp_tn_DA.cons(), u_Val_R, 0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc);                // Propagation till (nominal...) tca of primary, validation R strategy
         xp_tnp1_Val_T = RK78(6, xp_tn_DA.cons(), u_Val_T, 0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc);                // Propagation till (nominal...) tca of primary, validation T strategy
+        xp_tnp1_Vec   = RK78(6, xp_tn_Vec, {u_Nom[0], u_Nom[1], u_Nom[2]},                               0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc); // Propagation from t(n) to t(n+1) of vector object primary
 
         switch(tCAHandling){
             case 1:
@@ -118,12 +117,12 @@ int main( void )
             }
             case 2:
             {   
-                tCA_tn = tcaInversion(2, u_Nom, u_tn, xp_tnp1_DA, xs_tnp1_Vec, tCA_tn, tCA_Nom, MuEarth, Lsc);             // Resolve the dependency of tCA as a DA variable through polynomial inversion
+                tCA_tn = tcaInversion(2, u_Nom, u_tn, xp_tnp1_DA, xs_tnp1_Vec, tCA_tn, tCA_Nom, MuEarth, Lsc);               // Resolve the dependency of tCA as a DA variable through polynomial inversion
             }
         }
         // Perhaps only needed for the last time interval
 
-        int DistanceMetric;                                                                                         // Choose which distance metric to use for quantifying risk and determining control
+        int DistanceMetric;                                                                                                  // Choose which distance metric to use for quantifying risk and determining control
         DistanceMetric = 1;
         // Case 1: Distance Metric is Euclidean Distance. 
         // Case 2: Distance Metric is Square Mahalanobis Distance (SMD)
@@ -154,7 +153,7 @@ int main( void )
                 }
 
                 // Now substitute the DA objects in the SMD, evaluated at tca (if n!=9)
-                if(n==9){
+                if(n==N-1){
                     EucDis         = DeltaRB_tnp1.vnorm();
                     // EucDis is now a Taylor polynomial of dr(tn), dv(tn) and du(tn) 
 
@@ -176,19 +175,19 @@ int main( void )
                     for (i=0; i<3; i++){
                         EvalVector[i+6] = ThrustMagnitude*u_OptFO_tn[i];                                             // The optimal thrust in first-order approximation
                     }
+                    //cout << "u_OptFO_tn norm: " << u_OptFO_tn.vnorm()  << EucDis << endl;
 
                     // For next iteration: First 6 are dx(tn): free DA variables to be substituted next iteration, last 3 are filled in control u(tn)
                     for (i=0; i<3; i++){
-                        EvalVector_Previous[i]   = rp_tn_DA[i] - xp_tn_Vec[i];
-                        EvalVector_Previous[i+3] = vp_tn_DA[i] - xp_tn_Vec[i+3];
+                        EvalVector_Previous[i]   = rp_tn_DA[i]; // - xp_tn_Vec[i];
+                        EvalVector_Previous[i+3] = vp_tn_DA[i]; // - xp_tn_Vec[i+3];
                         EvalVector_Previous[i+6] = ThrustMagnitude*u_OptFO_tn[i];
                     }
                     
                     EucDis_PreviousIt = EucDis.eval(EvalVector_Previous);
 
-                    if (DebugMode == 1)
+                    if (DebugMode == 1 && n>90)
                     {
-                        cout << "EucDis raw " << EucDis << endl;
                         cout << "Iteration: " << n << endl << endl;
                         cout << "uRTN opt: " << u_OptFO_tn << endl << endl;         
                         cout << "EucDis no control: "  <<  EucDis.cons() << endl << endl; 
@@ -197,12 +196,20 @@ int main( void )
                         cout << "EucDis R control: "  << EucDis_Val_R << endl << endl;  
                     }
                 } else { // Later iterations
+                    AlgebraicVector<DA> EvalVectorStartIt(9); 
+
+                    for(i=0; i<3; i++){
+                        EvalVectorStartIt[i]   = rp_tn_DA[i]; // - xp_tn_Vec[i];
+                        EvalVectorStartIt[i+3] = vp_tn_DA[i]; // - xp_tn_Vec[i+3];
+                        EvalVectorStartIt[i+6] = ThrustMagnitude*u_tn[i];
+                    }
+
                     for (i=0; i<6; i++){ // DA: dependent on xn and un
-                        EvalVector_Current[i]   = xp_tnp1_DA[i];                                                     // The EucDis of previous iteration now depends on dx(n+1), for which we now have a formulation in terms of dx(n) and u(n) 
+                        EvalVector_Current[i]   = xp_tnp1_DA.eval(EvalVectorStartIt)[i];                                                     // The EucDis of previous iteration now depends on dx(n+1), for which we now have a formulation in terms of dx(n) and u(n) 
                     }
-                    for (i=0; i<3; i++){ //DA
-                        EvalVector_Current[i+6] = u_tn[i];                                                           // u(tn) are undefined DA objects
-                    }
+                    // for (i=0; i<3; i++){ //DA
+                    //     EvalVector_Current[i+6] = ThrustMagnitude*u_tn[i];                                                           // u(tn) are undefined DA objects
+                    // }
                     EucDis_CurrentIt = EucDis_PreviousIt.eval(EvalVector_Current);                                   // Evaluation of EucDis from previous iteration with dependencies of current iteration
                     // TODO: Behaves weirdly? Check
 
@@ -218,12 +225,12 @@ int main( void )
                     for (i=0; i<3; i++){
                         EvalVector[i+6] = ThrustMagnitude*u_OptFO_tn[i];                                             // The optimal thrust in first-order approximation
                     }
-                    if (DebugMode == 1){
-                        cout << "EucDis_CurrentIt DA: " << EucDis_CurrentIt << endl;
+                    if (DebugMode == 1 && n>90){
+                        //cout << "EucDis_CurrentIt DA: " << EucDis_CurrentIt << endl;
                         cout << "Iteration: " << n << endl << endl;
                         cout << "uRTN opt: " << u_OptFO_tn << endl << endl;          // Weird; control seems correct, SMD not       
-                        cout << "EucDis no control: "  <<  EucDis.cons() << endl << endl; 
-                        cout << "EucDis previous it: "  << EucDis_PreviousIt.cons() << endl << endl;
+                        cout << "EucDis no control: "    << EucDis.cons() << endl << endl; 
+                        cout << "EucDis previous it: "   << EucDis_PreviousIt.cons() << endl << endl;
                         cout << "EucDis with control: "  << EucDis_CurrentIt.eval(EvalVector) << endl << endl;
                     }
                     // For next iteration: First 6 are dx(tn): free DA variables to be substituted next iteration, last 3 are filled in control u(tn)
@@ -234,9 +241,9 @@ int main( void )
                     }
 
                     EucDis_PreviousIt = EucDis.eval(EvalVector_Previous);
-                    if (DebugMode == 1){
-                    cout << "xp_tnp1_DA no control: "  << xp_tnp1_DA.cons() << endl << endl;
-                    cout << "xp_tnp1_DA with control: "  << xp_tnp1_DA.eval(EvalVector) << endl << endl;
+                    if (DebugMode == 1 && n> 90){
+                        //cout << "xp_tnp1_DA: "  << xp_tnp1_DA << endl << endl;
+                        //cout << "xp_tnp1_DA with control: "  << xp_tnp1_DA.eval(EvalVector) << endl << endl;
                     }
                       
                     // cout << "EucDis T control: "  << EucDisValT << endl << endl;  
