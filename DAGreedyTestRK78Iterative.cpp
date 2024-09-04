@@ -32,11 +32,11 @@ int main( void )
     AlgebraicVector<double> u_Val_T(3);                                 // Validation thrust: pure tangential
 
     for (i=0; i<3; i++){                                                // Initialise pure radial, tangential thrust (zero values)
-        u_Val_R[i]   = 0.0;
-        u_Val_T[i]   = 0.0;
+        u_Val_R[i]   = u_Nom[i];
+        u_Val_T[i]   = u_Nom[i];
     }
-    u_Val_R[0] = ThrustMagnitude;                                       // Initialise pure radial, tangential thrust (non-zero values)
-    u_Val_T[1] = ThrustMagnitude;
+    u_Val_R[0] = u_Nom[0] + ThrustMagnitude;                            // Initialise pure radial, tangential thrust (non-zero values)
+    u_Val_T[1] = u_Nom[1] + ThrustMagnitude;
     int Scenario = 3;                                                   // Initial condition scenarios
     // TODO: automate (ideally) -> automated tCA computation, or propagate backwards from tCA
     // Create larger scenario database
@@ -85,7 +85,7 @@ int main( void )
         }
 
         int tCAHandling;                                                             // Strategy for handling a variable tCA
-        tCAHandling = 1; 
+        tCAHandling = 2; 
         // Case 1: Approximation: no control between tcaNom and tca(u). Effectively: no change in tca
         // As such, a RK78 propagation of DA variables is performed till tcaNom, after which a Kepler propagation 
         // is done around tcaNom with tf a DA variable. Polynomial inversion is done to obtain tca as a 
@@ -97,21 +97,39 @@ int main( void )
         DA tCA_tn;                                                                                                  // Initialise tCA as DA object with (1) independent DA variable
         tCA_tn = DA(10);                
 
-        tCA_tn = tcaInversion(tCAHandling, u_Nom, xp_tn_DA, xs_tn_DA, tCA_tn, tCA_Nom, MuEarth, Lsc);               // Resolve the dependency of tCA as a DA variable through polynomial inversion
         AlgebraicVector<DA>     xp_tnp1_DA(6);                                                                      // Initialise primary state at t(n+1) as DA object 
-        AlgebraicVector<double> xs_tnp1_DA(6);                                                                      // Initialise primary state at t(n+1) as DA object 
-
+        AlgebraicVector<double> xs_tnp1_Vec(6);                                                                     // Initialise primary state at t(n+1) as vector object 
         AlgebraicVector<double> xp_tnp1_Vec(6);                                                                     // Initialise primary state at t(n+1) as vector object (for validation)
 
         double StepSizeN = static_cast<double>(1)/N;
+        // States at tf
         xp_tnp1_DA  = RK78(6, xp_tn_DA,  {u_Nom[0] + u_tn[0], u_Nom[1] + u_tn[1], u_Nom[2] + u_tn[2]}, 0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc); // Propagation from t(n) to t(n+1) of DA object primary
         xp_tnp1_Vec = RK78(6, xp_tn_Vec, {u_Nom[0], u_Nom[1], u_Nom[2]},                               0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc); // Propagation from t(n) to t(n+1) of vector object primary
-        xs_tnp1_DA  = RK78(6, xs_tn_Vec, {0.0, 0.0, 0.0},                                              0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc); // Propagation from t(n) to t(n+1) of vector object secondary
-        // Perhaps only needed for the last time interval
+        xs_tnp1_Vec = RK78(6, xs_tn_Vec, {0.0, 0.0, 0.0},                                              0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc); // Propagation from t(n) to t(n+1) of vector object secondary
 
         AlgebraicVector<double> xp_tnp1_Val_T(6), xp_tnp1_Val_R(6);                                                 // Initialise primary state at t(n+1) as vector object (for validation)
         xp_tnp1_Val_R = RK78(6, xp_tn_DA.cons(), u_Val_R, 0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc);                // Propagation till (nominal...) tca of primary, validation R strategy
         xp_tnp1_Val_T = RK78(6, xp_tn_DA.cons(), u_Val_T, 0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc);                // Propagation till (nominal...) tca of primary, validation T strategy
+
+        switch(tCAHandling){
+            case 1:
+            {
+                tCA_tn = tcaInversion(1, u_Nom, u_tn, xp_tnp1_DA, xs_tnp1_Vec, tCA_tn, tCA_Nom, MuEarth, Lsc);               // Resolve the dependency of tCA as a DA variable through polynomial inversion
+            }
+            case 2:
+            {   
+                cout << "tCA_tn DA before: " << tCA_tn << endl; 
+                tCA_tn = tcaInversion(2, u_Nom, u_tn, xp_tnp1_DA, xs_tnp1_Vec, tCA_tn, tCA_Nom, MuEarth, Lsc);             // Resolve the dependency of tCA as a DA variable through polynomial inversion
+                cout << "tCA_tn DA after: " << tCA_tn << endl; 
+            }
+        }
+        // Perhaps only needed for the last time interval
+
+        if (DebugMode == 1)
+        {
+            cout << "tCA_tn DA: " << tCA_tn << endl; 
+            cout << "tCA_tn cons: " << tCA_tn.cons() << endl; 
+        }
 
         int DistanceMetric;                                                                                         // Choose which distance metric to use for quantifying risk and determining control
         DistanceMetric = 1;
@@ -131,16 +149,16 @@ int main( void )
                 {
                 for(i=0; i<3; i++){
                     // DA Vectors
-                    DeltaRB_tnp1[i] = xp_tnp1_DA[i]   - xs_tnp1_DA[i];
-                    DeltaV_tnp1[i]  = xp_tnp1_DA[i+3] - xs_tnp1_DA[i+3];
+                    DeltaRB_tnp1[i] = xp_tnp1_DA[i]   - xs_tnp1_Vec[i];
+                    DeltaV_tnp1[i]  = xp_tnp1_DA[i+3] - xs_tnp1_Vec[i+3];
 
                     // Vectors
-                    DeltaRB_tnp1_Val_T[i] =  xp_tnp1_Val_T[i]   - xs_tnp1_DA[i];
-                    DeltaV_tnp1_Val_T[i]  =  xp_tnp1_Val_T[i+3] - xs_tnp1_DA[i+3];
+                    DeltaRB_tnp1_Val_T[i] =  xp_tnp1_Val_T[i]   - xs_tnp1_Vec[i];
+                    DeltaV_tnp1_Val_T[i]  =  xp_tnp1_Val_T[i+3] - xs_tnp1_Vec[i+3];
 
                     // Vectors
-                    DeltaRB_tnp1_Val_R[i] = xp_tnp1_Val_R[i]   - xs_tnp1_DA[i];
-                    DeltaV_tnp1_Val_R[i]  = xp_tnp1_Val_R[i+3] - xs_tnp1_DA[i+3];
+                    DeltaRB_tnp1_Val_R[i] = xp_tnp1_Val_R[i]   - xs_tnp1_Vec[i];
+                    DeltaV_tnp1_Val_R[i]  = xp_tnp1_Val_R[i+3] - xs_tnp1_Vec[i+3];
                 }
 
                 // Now substitute the DA objects in the SMD, evaluated at tca (if n!=9)
