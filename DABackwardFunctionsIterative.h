@@ -602,19 +602,19 @@ DA findTCA(const AlgebraicVector<DA> xrel, const int nvar){
 
 
 
-DA tcaInversion(int ControlCases, AlgebraicVector<DA> xp_tn_DA,AlgebraicVector<double> xs_tn_Vec, DA tCA_tn, double tCA_Nom, double MuEarth, double Lsc){ 
-    switch(ControlCases){
+DA tcaInversion(int tCAHandling, AlgebraicVector<double> uNom, AlgebraicVector<DA> xp_tn_DA,AlgebraicVector<DA> xs_tn_DA, DA tCA_tn, double tCA_Nom, double MuEarth, double Lsc){ 
+    switch(tCAHandling){
         case 1:
             AlgebraicVector<DA>     xp_tnp1_DA(6); 
-            AlgebraicVector<double> xs_tnp1_Vec(6);
-            xp_tnp1_DA  = RK78(6, xp_tn_DA,  {DA(7),DA(8),DA(9)}, 0.0, tCA_Nom*0.1,TBAcc,MuEarth,Lsc); // Propagation from t(N=9) to t(N=10) of DA object
-            xs_tnp1_Vec = RK78(6, xs_tn_Vec, {0.0, 0.0, 0.0},     0.0, tCA_Nom*0.1,TBAcc,MuEarth,Lsc); // Propagation from t(N=9) to t(N=10) of vector object
+            AlgebraicVector<DA>     xs_tnp1_DA(6);
+            xp_tnp1_DA  = RK78(6, xp_tn_DA, {uNom[0] + DA(7), uNom[1] + DA(8),uNom[2] + DA(9)}, 0.0, tCA_Nom*0.1,TBAcc,MuEarth,Lsc); // Propagation from t(N=9) to t(N=10) of DA object
+            xs_tnp1_DA  = RK78(6, xs_tn_DA, {0.0, 0.0, 0.0},                                    0.0, tCA_Nom*0.1,TBAcc,MuEarth,Lsc); // Propagation from t(N=9) to t(N=10) of vector object
             // Variable tCA at t(N=9) due to control between t(N=9) and t(N=10)
             tCA_tn = 0.0 + DA(10);
             AlgebraicVector<DA> xp_tCA_DA(6), xs_tCA_DA(6), xrel_tCA_DA(6);
 
             xp_tCA_DA        = KeplerProp(xp_tnp1_DA,  tCA_tn, MuEarth);
-            xs_tCA_DA        = KeplerProp(xs_tnp1_Vec, tCA_tn, MuEarth);
+            xs_tCA_DA        = KeplerProp(xs_tnp1_DA, tCA_tn, MuEarth);
             xrel_tCA_DA      = xp_tCA_DA  - xs_tCA_DA;
             DA tCA_tn        = findTCA(xrel_tCA_DA, 10);
             break;
