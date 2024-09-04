@@ -602,29 +602,34 @@ DA findTCA(const AlgebraicVector<DA> xrel, const int nvar){
 
 
 
-DA tcaInversion(int tCAHandling, AlgebraicVector<double> uNom, AlgebraicVector<DA> xp_tn_DA,AlgebraicVector<DA> xs_tn_DA, DA tCA_tn, double tCA_Nom, double MuEarth, double Lsc){ 
+DA tcaInversion(int tCAHandling, AlgebraicVector<double> u_Nom, AlgebraicVector<DA> u_tn, AlgebraicVector<DA> xp_tnp1_DA,AlgebraicVector<double> xs_tnp1_Vec, DA tCA_tn, double tCA_Nom, double MuEarth, double Lsc){ 
+    AlgebraicVector<DA>     xp_tCA_DA(6);                                                             // Initialise primary state at tCA as DA object 
+    AlgebraicVector<DA>     xs_tCA_DA(6); 
+    AlgebraicVector<DA>     xrel_tCA_DA(6);
     switch(tCAHandling){
         case 1:
-            AlgebraicVector<DA>     xp_tnp1_DA(6); 
-            AlgebraicVector<DA>     xs_tnp1_DA(6);
-            xp_tnp1_DA  = RK78(6, xp_tn_DA, {uNom[0] + DA(7), uNom[1] + DA(8),uNom[2] + DA(9)}, 0.0, tCA_Nom*0.1,TBAcc,MuEarth,Lsc); // Propagation from t(N=9) to t(N=10) of DA object
-            xs_tnp1_DA  = RK78(6, xs_tn_DA, {0.0, 0.0, 0.0},                                    0.0, tCA_Nom*0.1,TBAcc,MuEarth,Lsc); // Propagation from t(N=9) to t(N=10) of vector object
-            // Variable tCA at t(N=9) due to control between t(N=9) and t(N=10)
-            tCA_tn = 0.0 + DA(10);
-            AlgebraicVector<DA> xp_tCA_DA(6), xs_tCA_DA(6), xrel_tCA_DA(6);
+        {
+            AlgebraicVector<DA> xs_tnp1_DA;
+            for (int i=0; i<6; i++){
+                xs_tnp1_DA[i] = xs_tnp1_Vec[i] + 0*DA(i+1);
+            }
 
-            xp_tCA_DA        = KeplerProp(xp_tnp1_DA,  tCA_tn, MuEarth);
+            xp_tCA_DA        = KeplerProp(xp_tnp1_DA, tCA_tn, MuEarth);
             xs_tCA_DA        = KeplerProp(xs_tnp1_DA, tCA_tn, MuEarth);
-            xrel_tCA_DA      = xp_tCA_DA  - xs_tCA_DA;
-            DA tCA_tn        = findTCA(xrel_tCA_DA, 10);
-            break;
-        //case 2: TBD, what is written is outdated
-            // AlgebraicVector<DA> xptN10(6), xstN10(6);
-            // xptN10 = KeplerProp(6, xptN9DA, utN9, 0.0, pi*sqrt(ap*ap*ap/mu)*0.1 + DeltatCAtN9,TBAcc); // Propagation from t(N=9) to t(N=10) + delta tCA
-            // xstN10 = KeplerProp(6, xsf, utN9, 0.0, DeltatCAtN9,TBAcc); // Propagation from t(N=10) to t(N=10) + delta tCA
 
-            // Eliminate tCA as a DA variable, formulate Taylor polynomial in terms of dr, dv and du as DA variables
-            // tCAtN10 = findTCA(XReltN10, 11)
+            xrel_tCA_DA      = xp_tCA_DA  - xs_tCA_DA;
+            tCA_tn        = findTCA(xrel_tCA_DA, 10);
+            break;
+        }
+        case 2:
+        {
+            xp_tCA_DA        = xp_tnp1_DA  + TBAcc(xp_tnp1_DA, u_Nom + u_tn, 0.0, MuEarth, Lsc)*tCA_tn;              // Picard-Lindelöf integration in first order
+            xs_tCA_DA        = xs_tnp1_Vec + TBAcc(xs_tnp1_Vec, {0.0, 0.0, 0.0}, 0.0, MuEarth, Lsc)*tCA_tn;          // Picard-Lindelöf integration in first order
+
+            xrel_tCA_DA      = xp_tCA_DA  - xs_tCA_DA;
+            tCA_tn        = findTCA(xrel_tCA_DA, 10);
+            break;
+        }
     };
     return tCA_tn;
 }

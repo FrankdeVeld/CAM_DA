@@ -118,18 +118,10 @@ int main( void )
             }
             case 2:
             {   
-                cout << "tCA_tn DA before: " << tCA_tn << endl; 
                 tCA_tn = tcaInversion(2, u_Nom, u_tn, xp_tnp1_DA, xs_tnp1_Vec, tCA_tn, tCA_Nom, MuEarth, Lsc);             // Resolve the dependency of tCA as a DA variable through polynomial inversion
-                cout << "tCA_tn DA after: " << tCA_tn << endl; 
             }
         }
         // Perhaps only needed for the last time interval
-
-        if (DebugMode == 1)
-        {
-            cout << "tCA_tn DA: " << tCA_tn << endl; 
-            cout << "tCA_tn cons: " << tCA_tn.cons() << endl; 
-        }
 
         int DistanceMetric;                                                                                         // Choose which distance metric to use for quantifying risk and determining control
         DistanceMetric = 1;
