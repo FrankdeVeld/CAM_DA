@@ -10,7 +10,7 @@ using namespace DACE;
 int main( void )
 {   
     // Specifically for case N=100;
-    string SaveName = "N100";
+    string SaveName = "N100_Euc_LT";
     int N=100;
     int i;
     int j;

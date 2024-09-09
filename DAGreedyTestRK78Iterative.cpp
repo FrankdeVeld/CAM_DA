@@ -9,7 +9,7 @@ using namespace DACE;
 
 int main( void )
 {   
-    string SaveName = "N100";
+    string SaveName = "N100_Euc_LT";
     // DebugMode explicitly prints out some variables to check if something is wrong
     // 1 means on
     int DebugMode = 0;     
@@ -29,16 +29,7 @@ int main( void )
     double MuEarth = 398600;                                            // Gravitational parameter of the Earth     [km^3/s^2]
     double Lsc     = 1;                                                 // Length scale [currently unused]
     
-    double ThrustMagnitude = 1e-7;                                      // Thrust magntiude                         [km/s^3]
-    AlgebraicVector<double> u_Val_R(3);                                 // Validation thrust: pure radial
-    AlgebraicVector<double> u_Val_T(3);                                 // Validation thrust: pure tangential
-
-    for (i=0; i<3; i++){                                                // Initialise pure radial, tangential thrust (zero values)
-        u_Val_R[i]   = u_Nom[i];
-        u_Val_T[i]   = u_Nom[i];
-    }
-    u_Val_R[0] = u_Nom[0] + ThrustMagnitude;                            // Initialise pure radial, tangential thrust (non-zero values)
-    u_Val_T[1] = u_Nom[1] + ThrustMagnitude;
+    double ThrustMagnitude = 1e-10;                                      // Thrust magntiude                         [km/s^3]
     int Scenario = 3;                                                   // Initial condition scenarios
     // TODO: automate (ideally) -> automated tCA computation, or propagate backwards from tCA
     // Create larger scenario database
@@ -63,6 +54,8 @@ int main( void )
     DA SMD_PreviousIt;                                               // Initialise DA variable Square Mahalanobis Distance (previous iteration)
     DA PoC; 
     DA PoC_Current;
+    DA PoC_PreviousIt;
+    DA PoC_CurrentIt; 
 
     AlgebraicMatrix<double> xp_save(N+1,6), xs_save(N+1,6), u_save(N,3), xpadj_save(N,6);   // For data saving
     AlgebraicVector<double> DM_save(N);
@@ -113,25 +106,11 @@ int main( void )
         xp_tnp1_DA  = RK78(6, xp_tn_DA,  {u_Nom[0] + u_tn[0], u_Nom[1] + u_tn[1], u_Nom[2] + u_tn[2]}, 0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc); // Propagation from t(n) to t(n+1) of DA object primary
         xs_tnp1_Vec = RK78(6, xs_tn_Vec, {0.0, 0.0, 0.0},                                              0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc); // Propagation from t(n) to t(n+1) of vector object secondary
         
-        AlgebraicVector<double> xp_tnp1_Val_T(6), xp_tnp1_Val_R(6);                                                 // Initialise primary state at t(n+1) as vector object (for validation)
-        xp_tnp1_Val_R = RK78(6, xp_tn_DA.cons(), u_Val_R, 0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc);                // Propagation till (nominal...) tca of primary, validation R strategy
-        xp_tnp1_Val_T = RK78(6, xp_tn_DA.cons(), u_Val_T, 0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc);                // Propagation till (nominal...) tca of primary, validation T strategy
         xp_tnp1_Vec   = RK78(6, xp_tn_Vec, {u_Nom[0], u_Nom[1], u_Nom[2]},                               0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc); // Propagation from t(n) to t(n+1) of vector object primary
-
-        if (n==N-1){
-            DA tCA_tn;                                                                                                  // Initialise tCA as DA object with (1) independent DA variable
+        DA tCA_tn; 
+        if (n==N-1){                                                                                                  // Initialise tCA as DA object with (1) independent DA variable
             tCA_tn = DA(10);                
-
-            switch(tCAHandling){
-                case 1:
-                {
-                    tCA_tn = tcaInversion(1, u_Nom, u_tn, xp_tnp1_DA, xs_tnp1_Vec, tCA_tn, tCA_Nom, MuEarth, Lsc);               // Resolve the dependency of tCA as a DA variable through polynomial inversion
-                }
-                case 2:
-                {   
-                    tCA_tn = tcaInversion(2, u_Nom, u_tn, xp_tnp1_DA, xs_tnp1_Vec, tCA_tn, tCA_Nom, MuEarth, Lsc);               // Resolve the dependency of tCA as a DA variable through polynomial inversion
-                }
-            }
+            tCA_tn = tcaInversion(tCAHandling, u_Nom, u_tn, xp_tnp1_DA, xs_tnp1_Vec, tCA_tn, tCA_Nom, MuEarth, Lsc);               // Resolve the dependency of tCA as a DA variable through polynomial inversion
         }
 
         int DistanceMetric;                                                                                                  // Choose which distance metric to use for quantifying risk and determining control
@@ -144,8 +123,6 @@ int main( void )
         AlgebraicVector<DA>     EvalVector_Previous(9);                                                             // Initialise the evaluation vector of the previous iteration as a DA object
         AlgebraicVector<DA>     EvalVector_Current(9);                                                              // Initialise the evaluation vector of the current iteration as a DA object
         AlgebraicVector<DA>     DeltaRB_tnp1(3),  DeltaV_tnp1(3);                                                   // Initialise the relative position and velocity at t(n+1) as DA objects
-        AlgebraicVector<double> DeltaRB_tnp1_Val_T(3), DeltaV_tnp1_Val_T(3);                                        // Initialise the relative position and velocity at t(n+1) for validation (transverse thrust) as vectors
-        AlgebraicVector<double> DeltaRB_tnp1_Val_R(3), DeltaV_tnp1_Val_R(3);                                        // Initialise the relative position and velocity at t(n+1) for validation (radial thrust) as vectors
         double                  CurrentDMValue;
         switch(DistanceMetric){
             case 1: // Case 1: Euclidean distance
@@ -156,24 +133,10 @@ int main( void )
                         // DA Vectors
                         DeltaRB_tnp1[i] = xp_tnp1_DA[i]   - xs_tnp1_Vec[i];
                         DeltaV_tnp1[i]  = xp_tnp1_DA[i+3] - xs_tnp1_Vec[i+3];
-
-                        // Vectors
-                        DeltaRB_tnp1_Val_T[i] =  xp_tnp1_Val_T[i]   - xs_tnp1_Vec[i];
-                        DeltaV_tnp1_Val_T[i]  =  xp_tnp1_Val_T[i+3] - xs_tnp1_Vec[i+3];
-
-                        // Vectors
-                        DeltaRB_tnp1_Val_R[i] = xp_tnp1_Val_R[i]   - xs_tnp1_Vec[i];
-                        DeltaV_tnp1_Val_R[i]  = xp_tnp1_Val_R[i+3] - xs_tnp1_Vec[i+3];
                     }
 
                     EucDis         = DeltaRB_tnp1.vnorm();
                     // EucDis is now a Taylor polynomial of dr(tn), dv(tn) and du(tn) 
-
-                    // Do the same for the validation Euclidean distance metrics; these are scalars rather than DA objects
-                    double EucDis_Val_T;
-                    EucDis_Val_T      = DeltaRB_tnp1_Val_T.vnorm();
-                    double EucDis_Val_R;
-                    EucDis_Val_R      = DeltaRB_tnp1_Val_R.vnorm();
 
                     // In first-order approximation, the control can be derived from the partial derivative of the DA object EucDis
                     for (i=0; i<3; i++){
@@ -195,7 +158,7 @@ int main( void )
                         EvalVector_Previous[i+3] = DA(i+4);
                         EvalVector_Previous[i+6] = ThrustMagnitude*u_OptFO_tn[i];
                     }
-                    
+                    cout << "tCA change: " << tCA_tn.eval(EvalVector) << endl; 
                     EucDis_PreviousIt = EucDis.eval(EvalVector_Previous);
                 } else { // Later iterations
                     AlgebraicVector<DA> EvalVector_StartIt(9); 
@@ -253,24 +216,10 @@ int main( void )
                         // DA Vectors
                         DeltaRB_tnp1[i] = xp_tnp1_DA[i]   - xs_tnp1_Vec[i];
                         DeltaV_tnp1[i]  = xp_tnp1_DA[i+3] - xs_tnp1_Vec[i+3];
-
-                        // Vectors
-                        DeltaRB_tnp1_Val_T[i] =  xp_tnp1_Val_T[i]   - xs_tnp1_Vec[i];
-                        DeltaV_tnp1_Val_T[i]  =  xp_tnp1_Val_T[i+3] - xs_tnp1_Vec[i+3];
-
-                        // Vectors
-                        DeltaRB_tnp1_Val_R[i] = xp_tnp1_Val_R[i]   - xs_tnp1_Vec[i];
-                        DeltaV_tnp1_Val_R[i]  = xp_tnp1_Val_R[i+3] - xs_tnp1_Vec[i+3];
                     }
 
                     SMD           = dot(DeltaRB_tnp1,P * DeltaRB_tnp1); 
                     // SMD is now a Taylor polynomial of dr(tn), dv(tn) and du(tn) 
-
-                    // Do the same for the validation Euclidean distance metrics; these are scalars rather than DA objects
-                    double SMD_Val_T;
-                    SMD_Val_T      = DeltaRB_tnp1_Val_T.vnorm();
-                    double SMD_Val_R;
-                    SMD_Val_R      = DeltaRB_tnp1_Val_R.vnorm();
 
                     // In first-order approximation, the control can be derived from the partial derivative of the DA object SMD
                     for (i=0; i<3; i++){
@@ -324,6 +273,87 @@ int main( void )
                     }
 
                     SMD_PreviousIt = SMD_CurrentIt.eval(EvalVector_Previous);
+                }
+                break;
+            } case 3: 
+            {
+                AlgebraicMatrix<double> P(3,3); 
+
+                P.at(0,0)      = 1;
+                P.at(0,1)      = 0.05; 
+                P.at(0,2)      = 0.04; 
+                P.at(1,0)      = P.at(0,1);
+                P.at(1,1)      = 0.9; 
+                P.at(1,2)      = 0.045; 
+                P.at(2,0)      = P.at(0,2);
+                P.at(2,1)      = P.at(1,2); 
+                P.at(2,2)      = 0.75; 
+
+                P = P*1e-6; // Small values
+                // Symmetric covariance matrix
+
+                if(n==N-1){
+                    for(i=0; i<3; i++){
+                        // DA Vectors
+                        DeltaRB_tnp1[i] = xp_tnp1_DA[i]   - xs_tnp1_Vec[i];
+                        DeltaV_tnp1[i]  = xp_tnp1_DA[i+3] - xs_tnp1_Vec[i+3];
+                    }
+                    double R = 0.002; // Hard-body radius
+                    PoC           = ConstPoC(DeltaRB_tnp1, P, R); 
+                    // PoC is now a Taylor polynomial of dr(tn), dv(tn) and du(tn) 
+                    cout << PoC.cons() << endl;
+                    // In first-order approximation, the control can be derived from the partial derivative of the DA object SMD
+                    for (i=0; i<3; i++){
+                        u_OptFO_tn[i] = cons(PoC.deriv(7+i));                                                     // The control is defined in the RTN reference frame
+                    }
+                    u_OptFO_tn = u_OptFO_tn/u_OptFO_tn.vnorm();                                                      // Normalise the control; we set the magnitude independently
+
+                    for (i=0; i<6; i++){
+                        EvalVector[i] = 0.0;                                                                         // The thrust u(tn) has no influence on dr(tn) and dv(tn); for evaluation, these are set to 0
+                    }
+                    for (i=0; i<3; i++){
+                        EvalVector[i+6] = ThrustMagnitude*u_OptFO_tn[i];                                             // The optimal thrust in first-order approximation
+                    }
+                    CurrentDMValue = PoC.eval(EvalVector);
+                    // For next iteration: First 6 are dx(tn): free DA variables to be substituted next iteration, last 3 are filled in control u(tn)
+                    for (i=0; i<3; i++){
+                        EvalVector_Previous[i]   = DA(i+1);
+                        EvalVector_Previous[i+3] = DA(i+4);
+                        EvalVector_Previous[i+6] = ThrustMagnitude*u_OptFO_tn[i];
+                    }
+                    
+                    PoC_PreviousIt = PoC.eval(EvalVector_Previous);
+                } else { // Later iterations
+                    AlgebraicVector<DA> EvalVector_StartIt(9); 
+
+                    for(i=0; i<3; i++){
+                        EvalVector_StartIt[i]   = xp_tnp1_DA[i]   - cons(xp_tnp1_DA[i]);
+                        EvalVector_StartIt[i+3] = xp_tnp1_DA[i+3] - cons(xp_tnp1_DA[i+3]);
+                        EvalVector_StartIt[i+6] = 0*DA(i+7);
+                    }
+                    PoC_CurrentIt = PoC_PreviousIt.eval(EvalVector_StartIt);                                   // Evaluation of SMD from previous iteration with dependencies of current iteration
+
+                    // In first-order approximation, the control can be derived from the partial derivative of the DA object SMD
+                    for (i=0; i<3; i++){
+                        u_OptFO_tn[i] = cons(PoC_CurrentIt.deriv(7+i));                                           // The control is defined in the RTN reference frame
+                    }
+                    u_OptFO_tn = u_OptFO_tn/u_OptFO_tn.vnorm();                                                      // Normalise the control; we set the magnitude independently
+
+                    for (i=0; i<6; i++){
+                        EvalVector[i] = 0.0;                                                                         // The thrust u(tn) has no influence on dr(tn) and dv(tn); for evaluation, these are set to 0
+                    }
+                    for (i=0; i<3; i++){
+                        EvalVector[i+6] = ThrustMagnitude*u_OptFO_tn[i];                                             // The optimal thrust in first-order approximation
+                    }
+                    CurrentDMValue = PoC_CurrentIt.eval(EvalVector);
+                    // For next iteration: First 6 are dx(tn): free DA variables to be substituted next iteration, last 3 are filled in control u(tn)
+                    for (i=0; i<3; i++){
+                        EvalVector_Previous[i]   = DA(i+1);
+                        EvalVector_Previous[i+3] = DA(i+4);
+                        EvalVector_Previous[i+6] = 0*DA(i+7);
+                    }
+
+                    PoC_PreviousIt = PoC_CurrentIt.eval(EvalVector_Previous);
                 }
                 break;
             }

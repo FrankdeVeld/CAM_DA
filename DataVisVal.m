@@ -1,4 +1,4 @@
-FileName = 'N100';
+FileName = 'N100_Euc_LT';
 
 xp     = load(['.\write_read\xp_',FileName,'.dat']);
 xpadj  = load(['.\write_read\xpadj_',FileName,'.dat']);
@@ -46,7 +46,12 @@ plot(t,norm_ValR-norm_nom, 'LineWidth', 2)
 plot(t,norm_ValT-norm_nom, 'LineWidth', 2)
 xlabel('Node number (-)', 'FontSize', 12, 'FontWeight', 'bold');
 ylabel('Norm difference with nominal [km]', 'FontSize', 12, 'FontWeight', 'bold');
-legend('Control','Pure Radial','Pure Tangential')
-title('Norm difference with primary (only final state matters really)')
+legend('Control','Pure Radial','Pure Tangential', 'Location', 'northwest')
+title('Norm difference with primary for various control strategies')
 
+% Save the figure as a PNG file
+saveas(gcf, ['ControlVal', FileName, '.png']);
+
+% Save the figure as a FIG file
+saveas(gcf, ['ControlVal', FileName, '.fig']);
 

@@ -543,6 +543,27 @@ template <typename T> AlgebraicMatrix<T> rtn2eci(const AlgebraicVector<T> & rv)
   return dcm;
 }
 
+template<typename T> T det2(AlgebraicMatrix<T> M)
+{    
+   // computes the determinant of a 2x2 matrix M
+    T det = M.at(0, 0) * M.at(1, 1) -  M.at(0, 1) * M.at(1, 0);
+
+    return det;
+}
+
+template<typename T, typename U> T ConstPoC(AlgebraicVector<T> r, AlgebraicMatrix<U> P, double R){
+  
+    // Constant PoC on B-plane
+    AlgebraicMatrix<U> P_inv(2,2);
+    U det = det2(P);
+    P_inv = P.inv();
+    
+    T smd = r.dot(P_inv*r);
+    T PoC = R*R/(2*sqrt(det))*exp(-smd/2);
+    
+    return PoC;
+}
+
 template<typename T> AlgebraicVector<T> TBAcc( AlgebraicVector<T> x, AlgebraicVector<T> uRTN, double t, double mu, double Lsc )
 {
     

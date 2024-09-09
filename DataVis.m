@@ -1,4 +1,5 @@
-FileName = 'N100';
+clc
+FileName = 'N100_Euc_LT';
 
 xp     = load(['.\write_read\xp_',FileName,'.dat']);
 
@@ -9,17 +10,17 @@ u      = load(['.\write_read\u_',FileName,'.dat']);
 DM     = load(['.\write_read\DM_',FileName,'.dat']);
 
 %% Orbits
-figure()
-hold on
-scatter3(xp(:,1),xp(:,2),xp(:,3))
-scatter3(xpadj(:,1),xpadj(:,2),xpadj(:,3))
-scatter3(xs(:,1),xs(:,2),xs(:,3))
-legend('primary','primary with control','secondary')
-axis equal
+% figure()
+% hold on
+% scatter3(xp(:,1),xp(:,2),xp(:,3))
+% scatter3(xpadj(:,1),xpadj(:,2),xpadj(:,3))
+% scatter3(xs(:,1),xs(:,2),xs(:,3))
+% legend('primary','primary with control','secondary')
+% axis equal
 
 %% Just the norms of the orbits
 normxp = sqrt(xp(2:end,1).^2+ xp(2:end,2).^2+xp(2:end,3).^2);
-normxpadj = sqrt(xpadj(1:(end-1),1).^2+ xpadj(1:(end-1),2).^2+xpadj(1:(end-1),3).^2);
+normxpadj = sqrt(xpadj(1:(end),1).^2+ xpadj(1:(end),2).^2+xpadj(1:(end),3).^2);
 t = [1:1:length(normxp)]';
 figure()
 hold on
@@ -38,8 +39,8 @@ saveas(gcf, ['Diff', FileName, '.png']);
 saveas(gcf, ['Diff', FileName, '.fig']);
 %% Norm difference over time
 figure()
-plot(t,abs(normxpadj - normxp), 'LineWidth', 2)
 t = [1:1:length(normxp)]';
+plot(t(1:end),abs(normxpadj - normxp), 'LineWidth', 2)
 grid on
 xlabel('Node number (-)', 'FontSize', 12, 'FontWeight', 'bold');
 ylabel('Distance to nominal (km)', 'FontSize', 12, 'FontWeight', 'bold');
