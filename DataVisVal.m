@@ -1,4 +1,4 @@
-FileName = 'N100_Euc_LT';
+FileName = 'N100_Euc';
 
 xp     = load(['.\write_read\xp_',FileName,'.dat']);
 xpadj  = load(['.\write_read\xpadj_',FileName,'.dat']);
@@ -55,3 +55,6 @@ saveas(gcf, ['ControlVal', FileName, '.png']);
 % Save the figure as a FIG file
 saveas(gcf, ['ControlVal', FileName, '.fig']);
 
+%%
+dot(xfull_Val(end,1:3)-xs(end,1:3),xfull_Val(end,4:6)-xs(end,4:6))
+dot(xp(end,1:3)-xs(end,1:3),xp(end,4:6)-xs(end,4:6))

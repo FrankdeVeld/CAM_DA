@@ -10,7 +10,7 @@ using namespace DACE;
 int main( void )
 {   
     // Specifically for case N=100;
-    string SaveName = "N100_Euc_LT";
+    string SaveName = "N100_Euc";
     int N=100;
     int i;
     int j;
@@ -71,12 +71,23 @@ int main( void )
     }
     u.close();
 
-    // // Output the matrices to verify correct loading
-    // std::cout << "xp_Nom Matrix:" << std::endl;
-    // std::cout << xp_Nom << std::endl;
+    // Read the tCA vector
+    std::ifstream tCA("./write_read/tCA_" + SaveName + ".dat");
+    if (!tCA.is_open()) {
+        std::cerr << "Failed to open tCA file" << std::endl;
+        return 1;
+    }
 
-    // std::cout << "u_Opt Matrix:" << std::endl;
-    // std::cout << u_Opt << std::endl;
+    for (int i = 0; i < N; ++i) {
+        if (!(tCA >> tCA_Opt[i])) {
+            std::cerr << "Error reading tCA vector at (" << i << ")" << std::endl;
+            return 1;
+        }
+    }
+    tCA.close();
+
+    double dtca0 = tCA[0];
+    double dtcaf = tCA[N-1];
 
     AlgebraicMatrix<double> xnp1_save(N+1,6);
     AlgebraicMatrix<double> xnfull_save(N+1,6);
@@ -96,7 +107,13 @@ int main( void )
             un[j] = u_Opt.at(i,j);
         }
         double StepSizeN = static_cast<double>(1)/N;
-        xnp1 = RK78(6, xn, un*ThrustMagnitude, 0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc);  
+        if (i==N-1)
+        {
+            xnp1 = RK78(6, xn, un*ThrustMagnitude, 0.0, tCA_Nom*StepSizeN+dtca0,TBAcc,MuEarth,Lsc); 
+        } else {
+            xnp1 = RK78(6, xn, un*ThrustMagnitude, 0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc); 
+        }
+         
         for(j=0;j<6;j++)
         {
             xnp1_save.at(i+1,j)    = xnp1[j];
@@ -113,7 +130,7 @@ int main( void )
     {
         xnfull_save.at(0,j)    = xp_Nom.at(0,j);
     }
-
+    
     for(i=0;  i<N; i++){ // Full propagation
         double StepSizeN = static_cast<double>(1)/N;
         if (i==0){
@@ -125,7 +142,14 @@ int main( void )
             }
             x1 = RK78(6, xn, un*ThrustMagnitude, 0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc);  
             xnext = x1;
-        } else {
+        } else if(i==N-1)
+        {
+            for(j=0; j<3; j++){
+                un[j] = u_Opt.at(i-1,j);
+            }
+            xnext = RK78(6, xnext, un*ThrustMagnitude, 0.0, tCA_Nom*StepSizeN+dtcaf,TBAcc,MuEarth,Lsc); 
+        }
+        else {
             for(j=0; j<3; j++){
                 un[j] = u_Opt.at(i-1,j);
             }
@@ -177,6 +201,13 @@ int main( void )
             x1_T = RK78(6, xn, un_T*ThrustMagnitude, 0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc); 
             xnext_R = x1_R;
             xnext_T = x1_T;
+        } else if(i==N-1) {
+            for(j=0; j<3; j++){
+                un_T[j] = u_Val_T[j];
+                un_R[j] = u_Val_R[j];
+            }
+            xnext_R = RK78(6, xnext_R, un_R*ThrustMagnitude, 0.0, tCA_Nom*StepSizeN+dtcaf,TBAcc,MuEarth,Lsc); 
+            xnext_T = RK78(6, xnext_T, un_T*ThrustMagnitude, 0.0, tCA_Nom*StepSizeN+dtcaf,TBAcc,MuEarth,Lsc);  
         } else {
             for(j=0; j<3; j++){
                 un_T[j] = u_Val_T[j];

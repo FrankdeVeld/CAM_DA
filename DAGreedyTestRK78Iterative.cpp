@@ -9,10 +9,8 @@ using namespace DACE;
 
 int main( void )
 {   
-    string SaveName = "N100_Euc_LT";
-    // DebugMode explicitly prints out some variables to check if something is wrong
-    // 1 means on
-    int DebugMode = 0;     
+    string SaveName = "N100_Euc";
+  
     int i;
     int j;
     DA::init( 1, 10 );                                                   // DA(1:6) = xp(tn), DA(7:9) = u(tn),  DA(10) = tCA(tn) 
@@ -29,7 +27,7 @@ int main( void )
     double MuEarth = 398600;                                            // Gravitational parameter of the Earth     [km^3/s^2]
     double Lsc     = 1;                                                 // Length scale [currently unused]
     
-    double ThrustMagnitude = 1e-10;                                      // Thrust magntiude                         [km/s^3]
+    double ThrustMagnitude = 1e-7;                                      // Thrust magntiude                         [km/s^3]
     int Scenario = 3;                                                   // Initial condition scenarios
     // TODO: automate (ideally) -> automated tCA computation, or propagate backwards from tCA
     // Create larger scenario database
@@ -56,9 +54,12 @@ int main( void )
     DA PoC_Current;
     DA PoC_PreviousIt;
     DA PoC_CurrentIt; 
+    DA tCA_Current;
+    DA tCA_PreviousIt;
+    DA tCA_CurrentIt;
 
     AlgebraicMatrix<double> xp_save(N+1,6), xs_save(N+1,6), u_save(N,3), xpadj_save(N,6);   // For data saving
-    AlgebraicVector<double> DM_save(N);
+    AlgebraicVector<double> DM_save(N), tCA_save(N);
 
     /////// Discretisation: first consider N timesteps, look at state at t(N-1), thrust arc from t(N-1) to tCA(t(N-1)), see if distance metric is sufficient or not
     for(int n= N-1; n>-1; n--) {
@@ -123,7 +124,7 @@ int main( void )
         AlgebraicVector<DA>     EvalVector_Previous(9);                                                             // Initialise the evaluation vector of the previous iteration as a DA object
         AlgebraicVector<DA>     EvalVector_Current(9);                                                              // Initialise the evaluation vector of the current iteration as a DA object
         AlgebraicVector<DA>     DeltaRB_tnp1(3),  DeltaV_tnp1(3);                                                   // Initialise the relative position and velocity at t(n+1) as DA objects
-        double                  CurrentDMValue;
+        double                  CurrentDMValue, CurrenttCAValue;
         switch(DistanceMetric){
             case 1: // Case 1: Euclidean distance
                 {
@@ -152,13 +153,15 @@ int main( void )
                     }
                     
                     CurrentDMValue = EucDis.eval(EvalVector);
+                    CurrenttCAValue = tCA_tn.eval(EvalVector);
                     // For next iteration: First 6 are dx(tn): free DA variables to be substituted next iteration, last 3 are filled in control u(tn)
                     for (i=0; i<3; i++){
                         EvalVector_Previous[i]   = DA(i+1);
                         EvalVector_Previous[i+3] = DA(i+4);
-                        EvalVector_Previous[i+6] = ThrustMagnitude*u_OptFO_tn[i];
+                        EvalVector_Previous[i+6] = ThrustMagnitude*u_OptFO_tn[i]; // 
                     }
-                    cout << "tCA change: " << tCA_tn.eval(EvalVector) << endl; 
+
+                    tCA_PreviousIt    = tCA_tn.eval(EvalVector_Previous);
                     EucDis_PreviousIt = EucDis.eval(EvalVector_Previous);
                 } else { // Later iterations
                     AlgebraicVector<DA> EvalVector_StartIt(9); 
@@ -169,6 +172,7 @@ int main( void )
                         EvalVector_StartIt[i+6] = 0*DA(i+7);
                     }
                     EucDis_CurrentIt = EucDis_PreviousIt.eval(EvalVector_StartIt);                                   // Evaluation of EucDis from previous iteration with dependencies of current iteration
+                    tCA_CurrentIt    = tCA_PreviousIt.eval(EvalVector_StartIt);                                   // Evaluation of EucDis from previous iteration with dependencies of current iteration
 
                     // In first-order approximation, the control can be derived from the partial derivative of the DA object EucDis
                     for (i=0; i<3; i++){
@@ -183,13 +187,13 @@ int main( void )
                         EvalVector[i+6] = ThrustMagnitude*u_OptFO_tn[i];                                             // The optimal thrust in first-order approximation
                     }
                     CurrentDMValue = EucDis_CurrentIt.eval(EvalVector);
+                    CurrenttCAValue = tCA_CurrentIt.eval(EvalVector);
                     // For next iteration: First 6 are dx(tn): free DA variables to be substituted next iteration, last 3 are filled in control u(tn)
                     for (i=0; i<3; i++){
                         EvalVector_Previous[i]   = DA(i+1);
                         EvalVector_Previous[i+3] = DA(i+4);
                         EvalVector_Previous[i+6] = 0*DA(i+7);
                     }
-
                     EucDis_PreviousIt = EucDis_CurrentIt.eval(EvalVector_Previous);
                 }
                 break;
@@ -369,6 +373,7 @@ int main( void )
             u_save.at(n,i)     = u_OptFO_tn[i];
         }
         DM_save[n] = CurrentDMValue;
+        tCA_save[n] = CurrenttCAValue;
     }
     for(i=0;i<6;i++)
     {
@@ -377,7 +382,7 @@ int main( void )
     }
 
     
-    ofstream xp, xs, u, xpadj, DM;
+    ofstream xp, xs, u, xpadj, DM, tCA;
     string xpFileName = "./write_read/xp_" + SaveName + ".dat";
     xp.open(xpFileName);
     xp << setprecision(16);
@@ -437,6 +442,15 @@ int main( void )
         DM << DM_save[i] << endl;
     }
     DM.close();
+
+    string tCAFileName = "./write_read/tCA_" + SaveName + ".dat";
+    tCA.open(tCAFileName);
+    tCA << setprecision(16);
+    for (i=0; i<N; i++)
+    {
+        tCA << tCA_save[i] << endl;
+    }
+    tCA.close();
 }
     
 
