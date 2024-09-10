@@ -737,7 +737,7 @@ double FilePrint(string SaveName, int N, AlgebraicMatrix<double> xp_save, Algebr
     deltar << setprecision(16);
     for (i=0; i<N; i++)
     {
-        for(j=0; j<6;j++)
+        for(j=0; j<3;j++)
         {   
             deltar << DeltaRB_save.at(i,j) << " ";
         }

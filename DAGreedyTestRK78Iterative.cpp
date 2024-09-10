@@ -44,8 +44,8 @@ int main( void )
     // TODO: Connect N with RTN profile of control; make adaptive
 
     // For iterative loop
-    DA DM, tCA;
-    AlgebraicVector<DA> DeltaRB(3);
+    DA DM_tn, tCA_tn; 
+    AlgebraicVector<DA> DeltaRB_tn(3);
 
     AlgebraicMatrix<double> xp_save(N+1,6), xs_save(N+1,6), u_save(N,3), xpadj_save(N,6), DeltaRB_save(N,3);   // For data saving
     AlgebraicVector<double> DM_save(N), tCA_save(N);
@@ -98,7 +98,6 @@ int main( void )
         xp_tnp1_DA  = RK78(6, xp_tn_DA,  {u_Nom[0] + u_tn[0], u_Nom[1] + u_tn[1], u_Nom[2] + u_tn[2]}, 0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc); // Propagation from t(n) to t(n+1) of DA object primary
         xs_tnp1_Vec = RK78(6, xs_tn_Vec, {0.0, 0.0, 0.0},                                              0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc); // Propagation from t(n) to t(n+1) of vector object secondary
         
-        DA tCA_tn; 
         if (n==N-1){                                                                                                  // Initialise tCA as DA object with (1) independent DA variable
             tCA_tn = DA(10);                
             tCA_tn = tcaInversion(tCAHandling, u_Nom, u_tn, xp_tnp1_DA, xs_tnp1_Vec, tCA_tn, tCA_Nom, MuEarth, Lsc);               // Resolve the dependency of tCA as a DA variable through polynomial inversion
@@ -125,10 +124,10 @@ int main( void )
         R = 0.002; // Hard-body radius
 
         // Iterative loop and finding control
-        auto [xp_tnp1_Evaluated_Control, u_OptFO_tn, DeltaRB_Evaluated_Control, DM_Evaluated_Control, tCA_Evaluated_Control, DM_NextIt, tCA_NextIt, DeltaRB_NextIt] =  IterativeDA(n, N, DM_Case, xp_tnp1_DA, xs_tnp1_Vec, ThrustMagnitude, DM, tCA, DeltaRB, P, R);
-        DM           = DM_NextIt;
-        tCA          = tCA_NextIt;
-        DeltaRB      = DeltaRB_NextIt;
+        auto [xp_tnp1_Evaluated_Control, u_OptFO_tn, DeltaRB_Evaluated_Control, DM_Evaluated_Control, tCA_Evaluated_Control, DM_NextIt, tCA_NextIt, DeltaRB_NextIt] =  IterativeDA(n, N, DM_Case, xp_tnp1_DA, xs_tnp1_Vec, ThrustMagnitude, DM_tn, tCA_tn, DeltaRB_tn, P, R);
+        DM_tn           = DM_NextIt;
+        tCA_tn          = tCA_NextIt;
+        DeltaRB_tn      = DeltaRB_NextIt;
 
 
         // Saving in main matrices

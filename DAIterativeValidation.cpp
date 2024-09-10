@@ -18,24 +18,13 @@ int main( void )
     double ThrustMagnitude = 1e-7;                                      // Thrust magntiude                         [km/s^3]
     AlgebraicMatrix<double> xp_Nom(N,6); 
     AlgebraicMatrix<double> u_Opt(N,3); 
+    AlgebraicVector<double> tCA_Vec(N,3); 
 
     int Scenario = 3;
     double MuEarth = 398600;
     double Lsc  = 1;
     double tCA_Nom;                                                      // Initialise the time of closest approach for these objects
     tCA_Nom  = Initialtca(Scenario, MuEarth);                            // Obtain initial tCA
-
-    // ifstream xp;
-    // string xpFileName = "./write_read/xp_" + SaveName + ".dat";
-	// xp.open(xpFileName);
-    //     xp >> xp_Nom;
-    //     xp.close();
-    // cout << xp_Nom << endl;
-    // ifstream u;
-    // string uFileName = "./write_read/u_" + SaveName + ".dat";
-	// u.open(uFileName);
-    //     u >> u_Opt;
-    //     u.close();
 
     // Read the xp_Nom matrix
     std::ifstream xp("./write_read/xp_" + SaveName + ".dat");
@@ -79,15 +68,14 @@ int main( void )
     }
 
     for (int i = 0; i < N; ++i) {
-        if (!(tCA >> tCA_Opt[i])) {
+        if (!(tCA >> tCA_Vec[i])) {
             std::cerr << "Error reading tCA vector at (" << i << ")" << std::endl;
             return 1;
         }
     }
     tCA.close();
 
-    double dtca0 = tCA[0];
-    double dtcaf = tCA[N-1];
+    double dtcaf = tCA_Vec[0];
 
     AlgebraicMatrix<double> xnp1_save(N+1,6);
     AlgebraicMatrix<double> xnfull_save(N+1,6);
@@ -109,7 +97,7 @@ int main( void )
         double StepSizeN = static_cast<double>(1)/N;
         if (i==N-1)
         {
-            xnp1 = RK78(6, xn, un*ThrustMagnitude, 0.0, tCA_Nom*StepSizeN+dtca0,TBAcc,MuEarth,Lsc); 
+            xnp1 = RK78(6, xn, un*ThrustMagnitude, 0.0, tCA_Nom*StepSizeN+dtcaf,TBAcc,MuEarth,Lsc); 
         } else {
             xnp1 = RK78(6, xn, un*ThrustMagnitude, 0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc); 
         }
