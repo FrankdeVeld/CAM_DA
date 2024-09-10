@@ -508,8 +508,8 @@ AlgebraicVector<double> InitialXs(int Scenario,double MuEarth, double Lsc) {
             xs_tf[1] = 0.0;
             xs_tf[2] = 0.0;
             xs_tf[3] = 0.0;
-            xs_tf[4] = 0.0;  // at apogee
-            xs_tf[5] = -sqrt(MuEarth/abs(sec))*sqrt(1-eccs);
+            xs_tf[4] = -sqrt(MuEarth/abs(sec))*sqrt(1-eccs);  // at apogee
+            xs_tf[5] = 0.0;
             double tCA_Nom  = Initialtca(Scenario, MuEarth);                           // Obtain initial tCA
 
             // Secondary initial position, guaranteeing a collision at tca 

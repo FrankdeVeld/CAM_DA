@@ -20,7 +20,7 @@ int main( void )
     AlgebraicMatrix<double> u_Opt(N,3); 
     AlgebraicVector<double> tCA_Vec(N,3); 
 
-    int Scenario = 3;
+    int Scenario = 1;
     double MuEarth = 398600;
     double Lsc  = 1;
     double tCA_Nom;                                                      // Initialise the time of closest approach for these objects
@@ -121,6 +121,7 @@ int main( void )
     
     for(i=0;  i<N; i++){ // Full propagation
         double StepSizeN = static_cast<double>(1)/N;
+        
         if (i==0){
             for(j=0; j<6; j++){
                 xn[j] = xp_Nom.at(0,j);
@@ -141,12 +142,13 @@ int main( void )
             for(j=0; j<3; j++){
                 un[j] = u_Opt.at(i-1,j);
             }
-            xnext = RK78(6, xnext, un*ThrustMagnitude, 0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc);  
+            xnext = RK78(6, xnext, un*ThrustMagnitude, 0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc); 
         }
         for(j=0;j<6;j++)
         {
             xnfull_save.at(i+1,j)    = xnext[j];
         } 
+        
     }
 
     AlgebraicVector<double> u_Val_R(3);                                 // Validation thrust: pure radial
