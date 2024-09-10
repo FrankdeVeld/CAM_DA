@@ -50,149 +50,7 @@ template <typename T> T atan2_mod(T a, T b) {
     return angle;
 }
 
-double Initialtca(int Scenario,double MuEarth) {
-    double tca; 
-    switch(Scenario) {
-        case 1:
-            {
-            tca = 7.68061e3;
-            break;
-            }
-        case 2:
-            {
-            tca = 7.68061e3;
-            break;
-            }
-        case 3:
-            {
-            tca = 7.68061e3;
-            break;
-            }
-    }
-    return tca;
-}
 
-AlgebraicVector<double> InitialXs(int Scenario,double MuEarth) {
-    AlgebraicVector<double> xs_t0(6);
-    switch(Scenario) {
-        case 1:
-            {
-            // Set initial conditions
-            const double eccs = 0.5;
-
-            const double sec  = -20035.5;               
-            
-            // xs0[0] = sec    + DA(1); // sec km altitude
-            // xs0[1] = 0.0    + DA(2);
-            // xs0[2] = 0.0    + DA(3);
-            // xs0[3] = 0.0    + DA(4);
-            // xs0[4] = 0.0    + DA(5);  // at apogee
-            // xs0[5] = -sqrt(mu/abs(sec))*sqrt(1-eccs) + DA(6);
-
-            // Secondary initial position, guaranteeing a collision at tca
-            xs_t0[0] = -20035.49963;     // sec km altitude
-            xs_t0[1] = 0.0;          
-            xs_t0[2] = -2.72058944;    
-            xs_t0[3] = 0.0008565374959; 
-            xs_t0[4] = 0.0;             
-            xs_t0[5] = -3.153940884;      
-            // Nominal miss distance: 500 m
-            break;
-            }
-        case 2:
-            {
-            // Set initial conditions
-            const double eccs = 0.5;
-
-            const double sec  = 20035.5;               
-            
-            // xs0[0] = sec    + DA(1); // sec km altitude
-            // xs0[1] = 0.0    + DA(2);
-            // xs0[2] = 0.0    + DA(3);
-            // xs0[3] = 0.0    + DA(4);
-            // xs0[4] = 0.0    + DA(5);  // at apogee
-            // xs0[5] = -sqrt(mu/abs(sec))*sqrt(1-eccs) + DA(6);
-
-            // Secondary initial position, guaranteeing a collision at tca
-            xs_t0[0] = 20035.49963;     // sec km altitude
-            xs_t0[1] = 0.0;          
-            xs_t0[2] = 2.72058944;    
-            xs_t0[3] = -0.0008565374959; 
-            xs_t0[4] = 0.0;             
-            xs_t0[5] = 3.153940884;      
-            // Nominal miss distance: 500 m
-            break;
-            }
-        case 3:
-            {
-            // Set initial conditions
-            const double eccs = 0.5;
-
-            const double sec  = 20034;              
-
-            // Secondary initial position, guaranteeing a collision at tca
-            xs_t0[0] = sec;                              // prim km altitude
-            xs_t0[1] = 0.0;                            
-            xs_t0[2] = 0.0;                             
-            xs_t0[3] = 0.0;                            
-            xs_t0[4] = sqrt(MuEarth/abs(sec))*sqrt(1-eccs);  // at apogee
-            xs_t0[5] = 0.0;
-            break;      
-            }
-    }
-    return xs_t0;
-}
-
-AlgebraicVector<double> InitialXp(int Scenario,double MuEarth) {
-    AlgebraicVector<double> xp_t0(6);
-    switch(Scenario) {
-        case 1:
-            {
-            // Set initial conditions
-            const double eccp = 0.5;
-
-            const double prim = -20034;
-            
-            // Some random primary
-            xp_t0[0] = prim;                              // prim km altitude
-            xp_t0[1] = 0.0;                            
-            xp_t0[2] = 0.0;                             
-            xp_t0[3] = 0.0;                            
-            xp_t0[4] = -sqrt(MuEarth/abs(prim))*sqrt(1-eccp);  // at apogee
-            xp_t0[5] = 0.0;
-            break;   
-            }
-        case 2:
-            {
-            // Set initial conditions
-            const double eccp = 0.5;
-
-            const double prim = 20034;
-            
-            // Some random primary
-            xp_t0[0] = prim;                              // prim km altitude
-            xp_t0[1] = 0.0;                            
-            xp_t0[2] = 0.0;                             
-            xp_t0[3] = 0.0;                            
-            xp_t0[4] = sqrt(MuEarth/abs(prim))*sqrt(1-eccp);  // at apogee
-            xp_t0[5] = 0.0;
-            break;   
-            }   
-        case 3:
-            {
-            // Set initial conditions
-            xp_t0[0] = 20035.49963;     // prim km altitude
-            xp_t0[1] = 0.0;          
-            xp_t0[2] = 2.72058944;    
-            xp_t0[3] = -0.0008565374959; 
-            xp_t0[4] = 0.0;             
-            xp_t0[5] = 3.153940884;  
-            break;   
-            }                     
-
-    }
-    return xp_t0;
-}
 
 
 template<typename T, typename U>
@@ -623,7 +481,72 @@ DA findTCA(const AlgebraicVector<DA> xrel, const int nvar){
   return tca;
 }
 
+double Initialtca(int Scenario,double MuEarth) {
+    double tca; 
+    switch(Scenario) {
+        case 1:
+            {
+            tca = 3600;
+            break;
+            }
+    }
+    return tca;
+}
 
+AlgebraicVector<double> InitialXs(int Scenario,double MuEarth, double Lsc) {
+    AlgebraicVector<double> xs_t0(6);
+    AlgebraicVector<double> xs_tf(6);
+    switch(Scenario) {
+        case 1:
+            {
+            // Set initial conditions
+            const double eccs = 0.1;
+
+            const double sec  = 8000;               
+            // Secondary final position
+            xs_tf[0] = sec; // sec km altitude
+            xs_tf[1] = 0.0;
+            xs_tf[2] = 0.0;
+            xs_tf[3] = 0.0;
+            xs_tf[4] = 0.0;  // at apogee
+            xs_tf[5] = -sqrt(MuEarth/abs(sec))*sqrt(1-eccs);
+            double tCA_Nom  = Initialtca(Scenario, MuEarth);                           // Obtain initial tCA
+
+            // Secondary initial position, guaranteeing a collision at tca 
+            xs_t0 = RK78(6, xs_tf, {0.0, 0.0, 0.0}, 0.0, -tCA_Nom,TBAcc,MuEarth,Lsc);     
+            // Nominal miss distance: 500 m
+            break;
+            }
+    }
+    return xs_t0;
+}
+
+AlgebraicVector<double> InitialXp(int Scenario,double MuEarth, double Lsc) {
+    AlgebraicVector<double> xp_t0(6);
+    AlgebraicVector<double> xp_tf(6);
+    switch(Scenario) {
+        case 1:
+            {
+            // Set initial conditions
+            const double eccp = 0.1;
+
+            const double prim  = 8000.5;               
+            // Secondary final position
+            xp_tf[0] = prim; // sec km altitude
+            xp_tf[1] = 0.0;
+            xp_tf[2] = 0.0;
+            xp_tf[3] = 0.0;
+            xp_tf[4] = 0.0;  // at apogee
+            xp_tf[5] = -sqrt(MuEarth/abs(prim))*sqrt(1-eccp);
+            double tCA_Nom  = Initialtca(Scenario, MuEarth);                           // Obtain initial tCA
+
+            // Secondary initial position, guaranteeing a collision at tca 
+            xp_t0 = RK78(6, xp_tf, {0.0, 0.0, 0.0}, 0.0, -tCA_Nom,TBAcc,MuEarth,Lsc);     
+            // Nominal miss distance: 500 m  
+            }                  
+    }
+    return xp_t0;
+}
 
 DA tcaInversion(int tCAHandling, AlgebraicVector<double> u_Nom, AlgebraicVector<DA> u_tn, AlgebraicVector<DA> xp_tnp1_DA,AlgebraicVector<double> xs_tnp1_Vec, DA tCA_tn, double tCA_Nom, double MuEarth, double Lsc){ 
     AlgebraicVector<DA>     xp_tCA_DA(6);                                                             // Initialise primary state at tCA as DA object 
@@ -863,7 +786,7 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
         for (i=0; i<3; i++){
             Evaluated_NextIt[i]   = DA(i+1);
             Evaluated_NextIt[i+3] = DA(i+4);
-            Evaluated_NextIt[i+6] = ThrustMagnitude*u_OptFO_tn[i]; // Zeno thinks something else
+            Evaluated_NextIt[i+6] = ThrustMagnitude*u_OptFO_tn[i]; //
         }
 
         DM_NextIt                  = DM.eval(Evaluated_NextIt);

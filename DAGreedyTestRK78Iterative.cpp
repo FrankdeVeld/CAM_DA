@@ -29,12 +29,12 @@ int main( void )
     double Lsc     = 1;                                                 // Length scale [currently unused]
     
     double ThrustMagnitude = 1e-7;                                      // Thrust magntiude                         [km/s^3]
-    int Scenario = 3;                                                   // Initial condition scenarios
+    int Scenario = 1;                                                   // Initial condition scenarios
     // TODO: automate (ideally) -> automated tCA computation, or propagate backwards from tCA
     // Create larger scenario database
 
-    xp_t0    = InitialXp(Scenario, MuEarth);                            // Obtain initial state primary
-    xs_t0    = InitialXs(Scenario, MuEarth);                            // Obtain initial state secondary
+    xp_t0    = InitialXp(Scenario, MuEarth, Lsc);                            // Obtain initial state primary
+    xs_t0    = InitialXs(Scenario, MuEarth, Lsc);                            // Obtain initial state secondary
     tCA_Nom  = Initialtca(Scenario, MuEarth);                           // Obtain initial tCA
 
     xp_tf = RK78(6, xp_t0, u_Nom, 0.0, tCA_Nom,TBAcc,MuEarth,Lsc);                  // Propagation till nominal tca (primary)
