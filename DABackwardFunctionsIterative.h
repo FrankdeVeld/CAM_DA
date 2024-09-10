@@ -1,5 +1,7 @@
 #include <dace/dace.h>
 #include <cmath>
+#include <fstream>
+#include <iomanip>
 #include <iomanip>
 #include <typeinfo>
 using namespace std;
@@ -653,4 +655,220 @@ DA tcaInversion(int tCAHandling, AlgebraicVector<double> u_Nom, AlgebraicVector<
         }
     };
     return tCA_tn;
+}
+
+
+double FilePrint(string SaveName, int N, AlgebraicMatrix<double> xp_save, AlgebraicMatrix<double> xs_save, AlgebraicMatrix<double> u_save, AlgebraicMatrix<double> xpadj_save, AlgebraicMatrix<double> DeltaRB_save, AlgebraicVector<double> DM_save, AlgebraicVector<double> tCA_save)
+{
+    int i;
+    int j;
+    ofstream xp, xs, u, xpadj, DM, tCA, deltar;
+    string xpFileName = "./write_read/xp_" + SaveName + ".dat";
+    xp.open(xpFileName);
+    xp << setprecision(16);
+    for (i=0; i<N+1; i++)
+    {
+        for(j=0; j<6;j++)
+        {
+            xp << xp_save.at(i,j) << " ";
+        }
+        xp << endl;
+    }
+    xp.close();
+
+    string xsFileName = "./write_read/xs_" + SaveName + ".dat";
+    xs.open(xsFileName);
+    xs << setprecision(16);
+    for (i=0; i<N+1; i++)
+    {
+        for(j=0; j<6;j++)
+        {
+            xs << xs_save.at(i,j) << " ";
+        }
+        xs << endl;
+    }
+    xs.close();
+
+    string uFileName = "./write_read/u_" + SaveName + ".dat";
+    u.open(uFileName);
+    u << setprecision(16);
+    for (i=0; i<N; i++)
+    {
+        for(j=0; j<3;j++)
+        {
+            u << u_save.at(i,j) << " ";
+        }
+        u << endl;
+    }
+    u.close();
+
+    string xpadjFileName = "./write_read/xpadj_" + SaveName + ".dat";
+    xpadj.open(xpadjFileName);
+    for (i=0; i<N; i++)
+    {
+        for(j=0; j<6;j++)
+        {   
+            xpadj << xpadj_save.at(i,j) << " ";
+        }
+        xpadj << endl;
+    }
+    xpadj.close();
+
+    string DMFileName = "./write_read/DM_" + SaveName + ".dat";
+    DM.open(DMFileName);
+    DM << setprecision(16);
+    for (i=0; i<N; i++)
+    {
+        DM << DM_save[i] << endl;
+    }
+    DM.close();
+
+    string tCAFileName = "./write_read/tCA_" + SaveName + ".dat";
+    tCA.open(tCAFileName);
+    tCA << setprecision(16);
+    for (i=0; i<N; i++)
+    {
+        tCA << tCA_save[i] << endl;
+    }
+    tCA.close();
+
+    string deltarFileName = "./write_read/DeltaRB_" + SaveName + ".dat";
+    deltar.open(deltarFileName);
+    deltar << setprecision(16);
+    for (i=0; i<N; i++)
+    {
+        for(j=0; j<6;j++)
+        {   
+            deltar << DeltaRB_save.at(i,j) << " ";
+        }
+        deltar << endl;
+    }
+    deltar.close();
+    return 1;
+}
+
+DA Distance_Metric(int DM_Case,AlgebraicVector<DA> DeltaRB, AlgebraicMatrix<double> P, double R){
+    DA DM;
+    switch(DM_Case){
+        case 1: // Euclidean distance
+        {
+            DM = DeltaRB.vnorm();
+            break;
+        }
+        case 2: // SMD
+        {
+            DM = dot(DeltaRB,P * DeltaRB);
+            break;
+        }
+        case 3: // PoC
+        {
+            DM = ConstPoC(DeltaRB, P, R);
+            break;
+        }
+        default: // Handle unexpected DM_Case values
+        {
+            throw std::invalid_argument("Invalid Distance Metric");
+        }
+    }
+    return DM;
+}
+
+std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<double>, double, double, DA, DA, AlgebraicVector<DA>> IterativeDA(int n, int N, int DM_Case, AlgebraicVector<DA> xp_tnp1_DA, AlgebraicVector<double> xs_tnp1_Vec, double ThrustMagnitude, DA DM, DA tCA, AlgebraicVector<DA> DeltaRB, AlgebraicMatrix<double> P, double R){
+    int i;
+    int j;
+    AlgebraicVector<double> Evaluated_Control(9);
+    AlgebraicVector<DA> Evaluated_NextIt(9);
+    AlgebraicVector<DA> Evaluated_CurrentIt(9);
+
+    double DM_Evaluated_Control;
+    double tCA_Evaluated_Control;
+    AlgebraicVector<double> DeltaRB_Evaluated_Control(3);
+    AlgebraicVector<double> xp_tnp1_Evaluated_Control(6);
+
+    DA DM_NextIt;
+    DA tCA_NextIt;
+    AlgebraicVector<DA> DeltaRB_NextIt(3);
+
+    AlgebraicVector<double> u_OptFO_tn(3);
+    
+    // Now substitute the DA objects in the Distance Metric, evaluated at tca (if n!=N-1)
+    if(n==N-1){ 
+        for(i=0; i<3; i++){
+            // DA Vectors
+            DeltaRB[i] = xp_tnp1_DA[i]   - xs_tnp1_Vec[i];
+        }
+
+        DM          = Distance_Metric(DM_Case,DeltaRB,P,R);
+        // EucDis is now a Taylor polynomial of dr(tn), dv(tn) and du(tn) 
+
+        // In first-order approximation, the control can be derived from the partial derivative of the DA object EucDis
+        for (i=0; i<3; i++){
+            u_OptFO_tn[i] = cons(DM.deriv(7+i));                                                     // The control is defined in the RTN reference frame
+        }
+        u_OptFO_tn = u_OptFO_tn/u_OptFO_tn.vnorm();                                                      // Normalise the control; we set the magnitude independently
+
+        for (i=0; i<6; i++){
+            Evaluated_Control[i] = 0.0;                                                                         // The thrust u(tn) has no influence on dr(tn) and dv(tn); for evaluation, these are set to 0
+        }
+        for (i=0; i<3; i++){
+            Evaluated_Control[i+6] = ThrustMagnitude*u_OptFO_tn[i];                                             // The optimal thrust in first-order approximation
+        }
+        
+        DM_Evaluated_Control                    = DM.eval(Evaluated_Control);
+        tCA_Evaluated_Control                   = tCA.eval(Evaluated_Control);
+        DeltaRB_Evaluated_Control               = DeltaRB.eval(Evaluated_Control);
+        xp_tnp1_Evaluated_Control               = xp_tnp1_DA.eval(Evaluated_Control);
+        
+        // For next iteration: First 6 are dx(tn): free DA variables to be substituted next iteration, last 3 are filled in control u(tn)
+        for (i=0; i<3; i++){
+            Evaluated_NextIt[i]   = DA(i+1);
+            Evaluated_NextIt[i+3] = DA(i+4);
+            Evaluated_NextIt[i+6] = ThrustMagnitude*u_OptFO_tn[i]; // 
+        }
+
+        DM_NextIt                  = DM.eval(Evaluated_NextIt);
+        tCA_NextIt                 = tCA.eval(Evaluated_NextIt);
+        DeltaRB_NextIt             = DeltaRB.eval(Evaluated_NextIt);
+    } else { // Later iterations
+        for(i=0; i<3; i++){
+            Evaluated_CurrentIt[i]   = xp_tnp1_DA[i]   - cons(xp_tnp1_DA[i]);
+            Evaluated_CurrentIt[i+3] = xp_tnp1_DA[i+3] - cons(xp_tnp1_DA[i+3]);
+            Evaluated_CurrentIt[i+6] = 0*DA(i+7);
+        }
+
+
+        DM                            = DM.eval(Evaluated_CurrentIt);                                   // Evaluation of EucDis from previous iteration with dependencies of current iteration
+        tCA                           = tCA.eval(Evaluated_CurrentIt);                                   // Evaluation of EucDis from previous iteration with dependencies of current iteration
+        DeltaRB                       = DeltaRB.eval(Evaluated_CurrentIt);                                   // Evaluation of EucDis from previous iteration with dependencies of current iteration
+
+        // In first-order approximation, the control can be derived from the partial derivative of the DA object EucDis
+        for (i=0; i<3; i++){
+            u_OptFO_tn[i] = cons(DM.deriv(7+i));                                           // The control is defined in the RTN reference frame
+        }
+        u_OptFO_tn = u_OptFO_tn/u_OptFO_tn.vnorm();                                                      // Normalise the control; we set the magnitude independently
+
+        for (i=0; i<6; i++){
+            Evaluated_Control[i] = 0.0;                                                                         // The thrust u(tn) has no influence on dr(tn) and dv(tn); for evaluation, these are set to 0
+        }
+        for (i=0; i<3; i++){
+            Evaluated_Control[i+6] = ThrustMagnitude*u_OptFO_tn[i];                                             // The optimal thrust in first-order approximation
+        }
+
+        DM_Evaluated_Control                    = DM.eval(Evaluated_Control);
+        tCA_Evaluated_Control                   = tCA.eval(Evaluated_Control);
+        DeltaRB_Evaluated_Control               = DeltaRB.eval(Evaluated_Control);
+        xp_tnp1_Evaluated_Control               = xp_tnp1_DA.eval(Evaluated_Control);
+
+        // For next iteration: First 6 are dx(tn): free DA variables to be substituted next iteration, last 3 are filled in control u(tn)
+        for (i=0; i<3; i++){
+            Evaluated_NextIt[i]   = DA(i+1);
+            Evaluated_NextIt[i+3] = DA(i+4);
+            Evaluated_NextIt[i+6] = ThrustMagnitude*u_OptFO_tn[i]; // Zeno thinks something else
+        }
+
+        DM_NextIt                  = DM.eval(Evaluated_NextIt);
+        tCA_NextIt                 = tCA.eval(Evaluated_NextIt);
+        DeltaRB_NextIt             = DeltaRB.eval(Evaluated_NextIt);
+    }
+    return std::make_tuple(xp_tnp1_Evaluated_Control, u_OptFO_tn, DeltaRB_Evaluated_Control, DM_Evaluated_Control, tCA_Evaluated_Control, DM_NextIt, tCA_NextIt, DeltaRB_NextIt);
 }
