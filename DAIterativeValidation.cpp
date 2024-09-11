@@ -10,12 +10,12 @@ using namespace DACE;
 int main( void )
 {   
     // Specifically for case N=100;
-    string SaveName = "N1000_Euc";
-    int N=1000;
+    string SaveName = "N50_Euc";
+    int N=50;
     int i;
     int j;
 
-    double ThrustMagnitude = 1e-7;                                      // Thrust magntiude                         [km/s^3]
+    double ThrustMagnitude = 1e-7;                                      // Thrust magnitude                         [km/s^3]
     AlgebraicMatrix<double> xp_Nom(N,6); 
     AlgebraicMatrix<double> u_Opt(N,3); 
     AlgebraicVector<double> tCA_Vec(N,3); 
@@ -76,6 +76,7 @@ int main( void )
     tCA.close();
 
     double dtcaf = tCA_Vec[0];
+    double dtca0 = tCA_Vec[N-1];
 
     AlgebraicVector<double> xs_t0(6);
     AlgebraicVector<double> xs_tf_new(6);
@@ -102,7 +103,7 @@ int main( void )
         double StepSizeN = static_cast<double>(1)/N;
         if (i==N-1)
         {
-            xnp1 = RK78(6, xn, un*ThrustMagnitude, 0.0, tCA_Nom*StepSizeN+dtcaf,TBAcc,MuEarth,Lsc); 
+            xnp1 = RK78(6, xn, un*ThrustMagnitude, 0.0, tCA_Nom*StepSizeN+dtca0,TBAcc,MuEarth,Lsc); 
         } else {
             xnp1 = RK78(6, xn, un*ThrustMagnitude, 0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc); 
         }

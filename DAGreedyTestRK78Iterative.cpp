@@ -10,37 +10,49 @@ using namespace DACE;
 int main( void )
 {   
     //////////////////////////////////////////////////////////////// START OF INITIALISATION ///////////////////////////////////////////////////////////////////////////////
-    string SaveName = "N1000_Euc";
+    string SaveName = "N10000_Euc";
   
     int i;
     int j;
     DA::init( 2, 10 );                                                   // DA(1:6) = xp(tn), DA(7:9) = u(tn),  DA(10) = tCA(tn) 
-    std::cout.precision(10);                                             // This is to print variables very precisely
+    double Mu      = 398600;                                            // Gravitational parameter of the Earth     [km^3/s^2]
+    double Lsc     = 6378; // km                                                 // Length scale [currently unused]
+    double Vsc     = sqrt(Mu/Lsc);
+    double Asc     = Vsc*Vsc/Lsc;
+    double tsc     = Lsc/Vsc; 
+    std::cout.precision(16);                                             // This is to print variables very precisely
     AlgebraicVector<double> xp_t0(6), xs_t0(6);                          // Initialise primary and seconday object state (Cartesian) at t0, which have a close approach at some time tCA
     double tCA_Nom;                                                      // Initialise the time of closest approach for these objects
     AlgebraicVector<double> u_Nom(3);                                    // Initialise nominal thrust (has not been tested for nonzero thrust)
     for (i=0; i<3; i++){                                                 // Nominal thrust is zero
-        u_Nom[i]   = 0.0;
+        u_Nom[i]   = 0.0/Asc;
     }
     
     AlgebraicVector<double> xp_tf(6), xs_tf(6);                         // Initialise primary and seconday object states at tCA
     
-    double MuEarth = 398600;                                            // Gravitational parameter of the Earth     [km^3/s^2]
-    double Lsc     = 1;                                                 // Length scale [currently unused]
-    
-    double ThrustMagnitude = 1e-7;                                      // Thrust magntiude                         [km/s^3]
+    double MuEarth = 1;
+
+    double ThrustMagnitude = 1e-7/Asc;                                      // Thrust magntiude                         [km/s^3]
     int Scenario = 1;                                                   // Initial condition scenarios
     // TODO: automate (ideally) -> automated tCA computation, or propagate backwards from tCA
     // Create larger scenario database
 
-    xp_t0    = InitialXp(Scenario, MuEarth, Lsc);                            // Obtain initial state primary
-    xs_t0    = InitialXs(Scenario, MuEarth, Lsc);                            // Obtain initial state secondary
-    tCA_Nom  = Initialtca(Scenario, MuEarth);                           // Obtain initial tCA
+    xp_t0    = InitialXp(Scenario, Mu, Lsc);                            // Obtain initial state primary
+    xs_t0    = InitialXs(Scenario, Mu, Lsc);                            // Obtain initial state secondary
+    tCA_Nom  = Initialtca(Scenario, Mu)/tsc;                           // Obtain initial tCA
+    
+    for(i=0;i<3;i++){
+        xp_t0[i] = xp_t0[i]/Lsc; 
+        xs_t0[i] = xs_t0[i]/Lsc; 
+        xp_t0[i+3] = xp_t0[i+3]/Vsc; 
+        xs_t0[i+3] = xs_t0[i+3]/Vsc; 
+    }
+    // Everything now dimensionless
 
     xp_tf = RK78(6, xp_t0, u_Nom, 0.0, tCA_Nom,TBAcc,MuEarth,Lsc);                  // Propagation till nominal tca (primary)
     xs_tf = RK78(6, xs_t0, {0.0, 0.0, 0.0}, 0.0, tCA_Nom,TBAcc,MuEarth,Lsc);      // Propagation till nominal tca (secondary)
     int N;                                                              // Initialise number of thrust arcs in the method 
-    N = 1000;                                                             // Number should have a relation with the eccentricity of the orbit
+    N = 10000;                                                             // Number should have a relation with the eccentricity of the orbit
     // TODO: Connect N with RTN profile of control; make adaptive
 
     int DM_Case;                                                                                                  // Choose which distance metric to use for quantifying risk and determining control
@@ -155,24 +167,30 @@ int main( void )
 
 
         // Saving in main matrices
-        for(i=0;i<6;i++)
+        for(i=0;i<3;i++)
         {
-            xp_save.at(n,i)      = xp_tn_Vec[i];
-            xs_save.at(n,i)      = xs_tn_Vec[i];
-            xpadj_save.at(n,i)   = xp_tnp1_Evaluated_Control[i];
+            xp_save.at(n,i)      = xp_tn_Vec[i]*Lsc;
+            xs_save.at(n,i)      = xs_tn_Vec[i]*Lsc;
+            xpadj_save.at(n,i)   = xp_tnp1_Evaluated_Control[i]*Lsc;
+
+            xp_save.at(n,i+3)      = xp_tn_Vec[i+3]*Vsc;
+            xs_save.at(n,i+3)      = xs_tn_Vec[i+3]*Vsc;
+            xpadj_save.at(n,i+3)   = xp_tnp1_Evaluated_Control[i+3]*Vsc;
         }
         for(i=0;i<3;i++)
         {
             u_save.at(n,i)       = u_OptFO_tn[i];
-            DeltaRB_save.at(n,i) = DeltaRB_Evaluated_Control[i];
+            DeltaRB_save.at(n,i) = DeltaRB_Evaluated_Control[i]*Lsc;
         }
-        DM_save[n] = DM_Evaluated_Control;
-        tCA_save[n] = tCA_Evaluated_Control;
+        DM_save[n] = DM_Evaluated_Control*Lsc*Lsc;
+        tCA_save[n] = tCA_Evaluated_Control*tsc;
     }
-    for(i=0;i<6;i++)
+    for(i=0;i<3;i++)
     {
-        xp_save.at(N,i)    = xp_tf[i];
-        xs_save.at(N,i)    = xs_tf[i];
+        xp_save.at(N,i)    = xp_tf[i]*Lsc;
+        xs_save.at(N,i)    = xs_tf[i]*Lsc;
+        xp_save.at(N,i+3)    = xp_tf[i+3]*Vsc;
+        xs_save.at(N,i+3)    = xs_tf[i+3]*Vsc;
     }
     // End of loop
     FilePrint(SaveName, N, xp_save, xs_save, u_save, xpadj_save, DeltaRB_save, DM_save, tCA_save);

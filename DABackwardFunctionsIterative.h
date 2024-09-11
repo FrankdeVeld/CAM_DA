@@ -574,9 +574,7 @@ tuple<DA, AlgebraicVector<DA>, AlgebraicVector<DA>> tcaInversion(int tCAHandling
             xs_tCA_DA        = xs_tnp1_Vec + TBAcc(xs_tnp1_Vec, {0.0, 0.0, 0.0}, 0.0, MuEarth, Lsc)*tCA_tn;          // Picard-Lindelöf integration in first order
 
             xrel_tCA_DA      = xp_tCA_DA  - xs_tCA_DA;
-            //cout << "tCA_DA: " << tCA_tn << endl;
             tCA_tn           = findTCA(xrel_tCA_DA, 10);
-            //cout << "tCA_DA: " << tCA_tn << endl;
             break;
         }
     };
@@ -630,6 +628,7 @@ double FilePrint(string SaveName, int N, AlgebraicMatrix<double> xp_save, Algebr
 
     string xpadjFileName = "./write_read/xpadj_" + SaveName + ".dat";
     xpadj.open(xpadjFileName);
+    xpadj << setprecision(16);
     for (i=0; i<N; i++)
     {
         for(j=0; j<6;j++)
@@ -678,12 +677,12 @@ DA Distance_Metric(int DM_Case,AlgebraicVector<DA> DeltaRB, AlgebraicMatrix<doub
     switch(DM_Case){
         case 1: // Euclidean distance
         {
-            DM = DeltaRB.vnorm();
+            DM = DeltaRB.dot(DeltaRB);
             break;
         }
         case 2: // SMD
         {
-            DM = dot(DeltaRB,P * DeltaRB);
+            DM = dot(DeltaRB,P.inv() * DeltaRB);
             break;
         }
         case 3: // PoC
@@ -713,10 +712,20 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
 
     DA DM_NextIt;
     DA tCA_NextIt;
+    double ConvRadius;
     AlgebraicVector<DA> DeltaRB_NextIt(3);
+    AlgebraicVector<DA> ConvRadiusEval(9);
 
     AlgebraicVector<double> u_OptFO_tn(3);
     
+    
+    for (i=0; i<6; i++){
+        ConvRadiusEval[i] = 0.0;                                                                         // The thrust u(tn) has no influence on dr(tn) and dv(tn); for evaluation, these are set to 0
+    }
+    for (i=0; i<3; i++){
+        ConvRadiusEval[i+6] = DA(7+i);                                             // The optimal thrust in first-order approximation
+    }
+
     // Now substitute the DA objects in the Distance Metric, evaluated at tca (if n!=N-1)
     if(n==N-1){ 
         for(i=0; i<3; i++){
@@ -724,6 +733,9 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
             DeltaRB[i] = xp_tnp1_DA[i] - xs_tnp1_DA[i];
         }
         DM          = Distance_Metric(DM_Case,DeltaRB,P,R);
+
+        ConvRadius = DM.eval(ConvRadiusEval).convRadius(1e-8,2);
+        //cout << "ConvRadius: " << ConvRadius << endl;
         // The distance metric is now a Taylor polynomial of dr(tn), dv(tn) and du(tn) 
 
         // In first-order approximation, the control can be derived from the partial derivative of the DA object DM
@@ -765,7 +777,9 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
         DM                            = DM.eval(Evaluated_CurrentIt);                                   // Evaluation of EucDis from previous iteration with dependencies of current iteration
         tCA                           = tCA.eval(Evaluated_CurrentIt);                                   // Evaluation of EucDis from previous iteration with dependencies of current iteration
         DeltaRB                       = DeltaRB.eval(Evaluated_CurrentIt);                                   // Evaluation of EucDis from previous iteration with dependencies of current iteration
-
+        
+        ConvRadius = DM.eval(ConvRadiusEval).convRadius(1e-8,2);
+        //cout << "ConvRadius: " << ConvRadius << endl;
         // In first-order approximation, the control can be derived from the partial derivative of the DA object EucDis
         for (i=0; i<3; i++){
             u_OptFO_tn[i] = cons(DM.deriv(7+i));                                           // The control is defined in the RTN reference frame

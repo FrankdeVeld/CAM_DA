@@ -1,60 +1,53 @@
-FileName = 'N100_Euc';
+FileName = 'N50_Euc';
 
 xp     = load(['.\write_read\xp_',FileName,'.dat']);
 xpadj  = load(['.\write_read\xpadj_',FileName,'.dat']);
 xs     = load(['.\write_read\xs_',FileName,'.dat']);
+xs_tf_new = load(['.\write_read\xsfnew_',FileName,'.dat']); % with adjusted tca
 DM     = load(['.\write_read\DM_',FileName,'.dat']);
+DeltaRB = load(['.\write_read\DeltaRB_',FileName,'.dat']);
 
 xpn        = load(['.\write_read\xnp1_Val_',FileName,'.dat']);
 xfull_Val  = load(['.\write_read\xfull_Val_',FileName,'.dat']);
 xfull_ValR  = load(['.\write_read\xfull_ValR_',FileName,'.dat']);
 xfull_ValT  = load(['.\write_read\xfull_ValT_',FileName,'.dat']);
 
-%% 
+%% Validating whether xp_tnp1 is correctly calculated
 Disxpadjxpn = sqrt( (xpadj(:,1) - xpn(2:end,1)).^2 +  (xpadj(:,2) - xpn(2:end,2)).^2 +  (xpadj(:,3) - xpn(2:end,3)).^2 );
 t = [1:1:length(Disxpadjxpn)]';
 figure()
 grid on
 plot(t,Disxpadjxpn)
 xlabel('Node number (-)', 'FontSize', 12, 'FontWeight', 'bold');
-ylabel('Distance between states (km)', 'FontSize', 12, 'FontWeight', 'bold');
+ylabel('Error (km)', 'FontSize', 12, 'FontWeight', 'bold');
 
-title('Distance xnp1 (DA) and validation propagation (N=100)')
+title('Error between adjusted states xnp1, DA and validation')
 
-%% 
-DisFVal = sqrt( (xfull_Val(end,1) - xs(end,1)).^2 +  (xfull_Val(end,2) - xs(end,2)).^2 +  (xfull_Val(end,3) - xs(end,3)).^2 );
-DisPrimVal = sqrt( (xfull_Val(end,1) - xp(end,1)).^2 +  (xfull_Val(end,2) - xp(end,2)).^2 +  (xfull_Val(end,3) - xp(end,3)).^2 );
-InitDis = sqrt( (xs(end,1) - xp(end,1)).^2 + (xs(end,2) - xp(end,2)).^2 +  (xs(end,3) - xp(end,3)).^2 );
+%% Validating whether the distance metric tracks the right thing
+DM_Val       = sqrt( (xfull_Val(end,1) - xs_tf_new(1)).^2 +  (xfull_Val(end,2) - xs_tf_new(2)).^2 +  (xfull_Val(end,3) - xs_tf_new(3)).^2 );
+DM_DeltaRB   = sqrt( (DeltaRB(1,1)).^2 + (DeltaRB(1,2)).^2 +  (DeltaRB(1,3)).^2);
+DM_Final     = DM(1);
 
-DMFinal = DM(1);
+fprintf('Difference DeltaRB DA propagation and validation: %.4f\n', abs(DM_Val-DM_DeltaRB));
+fprintf('Difference DM DA propagation and validation: %.4f\n', abs(DM_Val-DM_Final));
 
-error = abs(DisFVal - DMFinal)
+%% Distance metric evaluation - figure doesn't say much
+DM_Nom = sqrt((xp(end,1)-xs(end,1)).^2 + (xp(end,2)-xs(end,2)).^2 + (xp(end,3)-xs(end,3)).^2 ) ;
+fprintf('Nominal final Distance Metric: %.4f\n', DM_Nom);
+DM_Val = sqrt((xfull_Val(end,1)-xs_tf_new(1)).^2 + (xfull_Val(end,2)-xs_tf_new(2)).^2 + (xfull_Val(end,3)-xs_tf_new(3)).^2 ) ;
+fprintf('First-order control final Distance Metric: %.4f\n', DM_Val);
+DM_ValR = sqrt((xfull_ValR(end,1)-xs_tf_new(1)).^2 + (xfull_ValR(end,2)-xs_tf_new(2)).^2 + (xfull_ValR(end,3)-xs_tf_new(3)).^2 ) ;
+fprintf('Pure R thrust Distance Metric: %.4f\n', DM_ValR);
+DM_ValT = sqrt((xfull_ValT(end,1)-xs_tf_new(1)).^2 + (xfull_ValT(end,2)-xs_tf_new(2)).^2 + (xfull_ValT(end,3)-xs_tf_new(3)).^2 ) ;
+fprintf('Pure T final Distance Metric: %.4f\n', DM_ValT);
 
-%% 
-norm_nom = sqrt(xp(:,1).^2 + xp(:,1).^2 + xp(:,1).^2 ) ;
-norm_Val = sqrt(xfull_Val(:,1).^2 + xfull_Val(:,1).^2 + xfull_Val(:,1).^2 ) ;
-norm_ValR = sqrt(xfull_ValR(:,1).^2 + xfull_ValR(:,1).^2 + xfull_ValR(:,1).^2 ) ;
-norm_ValT = sqrt(xfull_ValT(:,1).^2 + xfull_ValT(:,1).^2 + xfull_ValT(:,1).^2 ) ;
-
-t = [1:1:length(norm_nom)]';
-
-figure()
-grid on
-hold on
-plot(t,norm_Val-norm_nom, 'LineWidth', 2)
-plot(t,norm_ValR-norm_nom, 'LineWidth', 2)
-plot(t,norm_ValT-norm_nom, 'LineWidth', 2)
-xlabel('Node number (-)', 'FontSize', 12, 'FontWeight', 'bold');
-ylabel('Norm difference with nominal [km]', 'FontSize', 12, 'FontWeight', 'bold');
-legend('Control','Pure Radial','Pure Tangential', 'Location', 'northwest')
-title('Norm difference with primary for various control strategies')
-
-% Save the figure as a PNG file
-saveas(gcf, ['ControlVal', FileName, '.png']);
-
-% Save the figure as a FIG file
-saveas(gcf, ['ControlVal', FileName, '.fig']);
-
-%%
-dot(xfull_Val(end,1:3)-xs(end,1:3),xfull_Val(end,4:6)-xs(end,4:6))
-dot(xp(end,1:3)-xs(end,1:3),xp(end,4:6)-xs(end,4:6))
+%% Check if the assessment is truly at the closest approach
+IP_Nom = dot(xp(end,1:3)+DeltaRB(end,1:3)-xs(end,1:3),xp(end,4:6)-xs(end,4:6));
+fprintf('Nominal final inner product: %.4f\n', IP_Nom);
+IP_Val = dot(xfull_Val(end,1:3)-xs_tf_new(1:3),xfull_Val(end,4:6)-xs_tf_new(4:6));
+fprintf('First-order control final inner product: %.4f\n', IP_Val);
+IP_ValR = dot(xfull_ValR(end,1:3)-xs_tf_new(1:3),xfull_ValR(end,4:6)-xs_tf_new(4:6));
+fprintf('Pure R thrust control final inner product: %.4f\n', IP_ValR);
+IP_ValT = dot(xfull_ValT(end,1:3)-xs_tf_new(1:3),xfull_ValT(end,4:6)-xs_tf_new(4:6));
+fprintf('Pure T thrust control final inner product: %.4f\n', IP_ValT);
+% If not zero: the comparison is not at the closest approach
