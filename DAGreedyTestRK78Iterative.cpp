@@ -134,9 +134,13 @@ int main( void )
             tCA_tn = DA(10);                                                                                                // Initialise tCA as DA object with (1) independent DA variable             
             std::tie(tCA_tn, xp_tCA_DA, xs_tCA_DA) = tcaInversion(tCAHandling, u_Nom, u_tn, xp_tnp1_DA, xs_tnp1_Vec, tCA_tn, MuEarth, Lsc);               // Resolve the dependency of tCA as a DA variable through polynomial inversion 
             // Iterative loop and finding control
-            for (i=0;i<9;i++)
+            for (i=0;i<6;i++)
             {
-                Evaluated_tCA[i] = DA(i);
+                Evaluated_tCA[i] = DA(i+1);
+            }
+            for (i=0;i<3;i++)
+            {
+                Evaluated_tCA[i+6] = DA(i+7); // *ThrustMagnitude?
             }
             Evaluated_tCA[9] = tCA_tn;
             xp_tCA_DA = xp_tCA_DA.eval(Evaluated_tCA);
