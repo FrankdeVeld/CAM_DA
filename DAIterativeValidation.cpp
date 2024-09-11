@@ -10,8 +10,8 @@ using namespace DACE;
 int main( void )
 {   
     // Specifically for case N=100;
-    string SaveName = "N100_Euc";
-    int N=100;
+    string SaveName = "N1000_Euc";
+    int N=1000;
     int i;
     int j;
 
@@ -76,6 +76,11 @@ int main( void )
     tCA.close();
 
     double dtcaf = tCA_Vec[0];
+
+    AlgebraicVector<double> xs_t0(6);
+    AlgebraicVector<double> xs_tf_new(6);
+    xs_t0    = InitialXs(Scenario, MuEarth, Lsc);
+    xs_tf_new = RK78(6, xs_t0, {0.0, 0.0, 0.0}, 0.0, tCA_Nom + dtcaf,TBAcc,MuEarth,Lsc);      // Propagation till nominal tca (secondary)
 
     AlgebraicMatrix<double> xnp1_save(N+1,6);
     AlgebraicMatrix<double> xnfull_save(N+1,6);
@@ -215,7 +220,7 @@ int main( void )
 
 
     // Output xnp1
-    ofstream xnp1_output, xfull_output, xR_output, xT_output;
+    ofstream xnp1_output, xfull_output, xR_output, xT_output, xsfnew;
     string xnp1FileName = "./write_read/xnp1_Val_" + SaveName + ".dat";
     xnp1_output.open(xnp1FileName);
     xnp1_output << setprecision(16);
@@ -228,6 +233,16 @@ int main( void )
         xnp1_output << endl;
     }
     xnp1_output.close();
+
+    string xsfnewFileName = "./write_read/xsfnew_" + SaveName + ".dat";
+    xsfnew.open(xsfnewFileName);
+    xsfnew << setprecision(16);
+    for(j=0; j<6;j++)
+    {
+        xsfnew << xs_tf_new[j] << " ";
+    }
+    xsfnew << endl;
+    xsfnew.close();
 
     // Output xf
     string xfFileName = "./write_read/xfull_Val_" + SaveName + ".dat";

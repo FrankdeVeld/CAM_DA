@@ -548,10 +548,11 @@ AlgebraicVector<double> InitialXp(int Scenario,double MuEarth, double Lsc) {
     return xp_t0;
 }
 
-DA tcaInversion(int tCAHandling, AlgebraicVector<double> u_Nom, AlgebraicVector<DA> u_tn, AlgebraicVector<DA> xp_tnp1_DA,AlgebraicVector<double> xs_tnp1_Vec, DA tCA_tn, double tCA_Nom, double MuEarth, double Lsc){ 
+tuple<DA, AlgebraicVector<DA>, AlgebraicVector<DA>> tcaInversion(int tCAHandling, AlgebraicVector<double> u_Nom, AlgebraicVector<DA> u_tn, AlgebraicVector<DA> xp_tnp1_DA,AlgebraicVector<double> xs_tnp1_Vec, DA tCA_tn, double MuEarth, double Lsc){ 
     AlgebraicVector<DA>     xp_tCA_DA(6);                                                             // Initialise primary state at tCA as DA object 
     AlgebraicVector<DA>     xs_tCA_DA(6); 
-    AlgebraicVector<DA>     xrel_tCA_DA(6);
+    AlgebraicVector<DA>     xrel_tCA_DA(6);                     
+    //cout << "tCA_DA: " << tCA_tn << endl;
     switch(tCAHandling){
         case 1:
         {
@@ -564,20 +565,22 @@ DA tcaInversion(int tCAHandling, AlgebraicVector<double> u_Nom, AlgebraicVector<
             xs_tCA_DA        = KeplerProp(xs_tnp1_DA, tCA_tn, MuEarth);
 
             xrel_tCA_DA      = xp_tCA_DA  - xs_tCA_DA;
-            tCA_tn        = findTCA(xrel_tCA_DA, 10);
+            tCA_tn           = findTCA(xrel_tCA_DA, 10);
             break;
         }
-        case 2:
+        case 2: // This might not be accurate enough in first-order, as I'm seeing tca discrepancies
         {
             xp_tCA_DA        = xp_tnp1_DA  + TBAcc(xp_tnp1_DA, u_Nom + u_tn, 0.0, MuEarth, Lsc)*tCA_tn;              // Picard-Lindelöf integration in first order
             xs_tCA_DA        = xs_tnp1_Vec + TBAcc(xs_tnp1_Vec, {0.0, 0.0, 0.0}, 0.0, MuEarth, Lsc)*tCA_tn;          // Picard-Lindelöf integration in first order
 
             xrel_tCA_DA      = xp_tCA_DA  - xs_tCA_DA;
-            tCA_tn        = findTCA(xrel_tCA_DA, 10);
+            //cout << "tCA_DA: " << tCA_tn << endl;
+            tCA_tn           = findTCA(xrel_tCA_DA, 10);
+            //cout << "tCA_DA: " << tCA_tn << endl;
             break;
         }
     };
-    return tCA_tn;
+    return std::make_tuple(tCA_tn, xp_tCA_DA, xs_tCA_DA);
 }
 
 
@@ -696,7 +699,7 @@ DA Distance_Metric(int DM_Case,AlgebraicVector<DA> DeltaRB, AlgebraicMatrix<doub
     return DM;
 }
 
-std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<double>, double, double, DA, DA, AlgebraicVector<DA>> IterativeDA(int n, int N, int DM_Case, AlgebraicVector<DA> xp_tnp1_DA, AlgebraicVector<double> xs_tnp1_Vec, double ThrustMagnitude, DA DM, DA tCA, AlgebraicVector<DA> DeltaRB, AlgebraicMatrix<double> P, double R){
+std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<double>, double, double, DA, DA, AlgebraicVector<DA>> IterativeDA(int n, int N, int DM_Case, AlgebraicVector<DA> xp_tnp1_DA, AlgebraicVector<DA> xs_tnp1_DA, double ThrustMagnitude, DA DM, DA tCA, AlgebraicVector<DA> DeltaRB, AlgebraicMatrix<double> P, double R){
     int i;
     int j;
     AlgebraicVector<double> Evaluated_Control(9);
@@ -718,13 +721,12 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
     if(n==N-1){ 
         for(i=0; i<3; i++){
             // DA Vectors
-            DeltaRB[i] = xp_tnp1_DA[i]   - xs_tnp1_Vec[i];
+            DeltaRB[i] = xp_tnp1_DA[i] - xs_tnp1_DA[i];
         }
-
         DM          = Distance_Metric(DM_Case,DeltaRB,P,R);
-        // EucDis is now a Taylor polynomial of dr(tn), dv(tn) and du(tn) 
+        // The distance metric is now a Taylor polynomial of dr(tn), dv(tn) and du(tn) 
 
-        // In first-order approximation, the control can be derived from the partial derivative of the DA object EucDis
+        // In first-order approximation, the control can be derived from the partial derivative of the DA object DM
         for (i=0; i<3; i++){
             u_OptFO_tn[i] = cons(DM.deriv(7+i));                                                     // The control is defined in the RTN reference frame
         }
