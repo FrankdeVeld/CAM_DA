@@ -131,12 +131,9 @@ int main( void )
         xs_tnp1_Vec = RK78(6, xs_tn_Vec, {0.0, 0.0, 0.0},                                              0.0, tCA_Nom*StepSizeN,TBAcc,MuEarth,Lsc); // Propagation from t(n) to t(n+1) of vector object secondary
         
         if (n==N-1){  
-            tCA_tn = DA(10);   
-            cout << "Before, tca: "<< tCA_tn << endl;                                                                                              // Initialise tCA as DA object with (1) independent DA variable             
-            std::tie(tCA_tn, xp_tCA_DA, xs_tCA_DA) = tcaInversion(tCAHandling, u_Nom, u_tn, xp_tnp1_DA, xs_tnp1_Vec, tCA_tn, MuEarth, Lsc);               // Resolve the dependency of tCA as a DA variable through polynomial inversion
-            cout << "After, tca: "<< tCA_tn << endl;  
+            tCA_tn = DA(10);                                                                                                // Initialise tCA as DA object with (1) independent DA variable             
+            std::tie(tCA_tn, xp_tCA_DA, xs_tCA_DA) = tcaInversion(tCAHandling, u_Nom, u_tn, xp_tnp1_DA, xs_tnp1_Vec, tCA_tn, MuEarth, Lsc);               // Resolve the dependency of tCA as a DA variable through polynomial inversion 
             // Iterative loop and finding control
-            cout << "Before, xs: "<< xs_tCA_DA << endl;
             for (i=0;i<9;i++)
             {
                 Evaluated_tCA[i] = DA(i);
@@ -144,7 +141,6 @@ int main( void )
             Evaluated_tCA[9] = tCA_tn;
             xp_tCA_DA = xp_tCA_DA.eval(Evaluated_tCA);
             xs_tCA_DA = xs_tCA_DA.eval(Evaluated_tCA);
-            cout << "After, xs:" << xs_tCA_DA << endl;
             std::tie(xp_tnp1_Evaluated_Control, u_OptFO_tn, DeltaRB_Evaluated_Control, DM_Evaluated_Control, tCA_Evaluated_Control, DM_NextIt, tCA_NextIt, DeltaRB_NextIt) =  IterativeDA(n, N, DM_Case, xp_tCA_DA, xs_tCA_DA, ThrustMagnitude, DM_tn, tCA_tn, DeltaRB_tn, P, R); 
         } else {
             std::tie(xp_tnp1_Evaluated_Control, u_OptFO_tn, DeltaRB_Evaluated_Control, DM_Evaluated_Control, tCA_Evaluated_Control, DM_NextIt, tCA_NextIt, DeltaRB_NextIt) =  IterativeDA(n, N, DM_Case, xp_tnp1_DA, xs_tCA_DA, ThrustMagnitude, DM_tn, tCA_tn, DeltaRB_tn, P, R);
