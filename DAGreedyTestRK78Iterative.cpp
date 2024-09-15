@@ -10,7 +10,7 @@ using namespace DACE;
 int main( void )
 {   
     //////////////////////////////////////////////////////////////// START OF INITIALISATION ///////////////////////////////////////////////////////////////////////////////
-    string SaveName = "N10000_Euc";
+    string SaveName = "N100_Julia_Val_T1em8";
   
     int i;
     int j;
@@ -32,12 +32,14 @@ int main( void )
     
     double MuEarth = 1;
 
-    double ThrustMagnitude = 1e-7/Asc;                                      // Thrust magntiude                         [km/s^3]
-    int Scenario = 1;                                                   // Initial condition scenarios
+    double ThrustMagnitude = 1e-8/Asc;                                      // Thrust magntiude                         [km/s^3]
+    int Scenario = 2;                                                   // Initial condition scenarios
     // TODO: automate (ideally) -> automated tCA computation, or propagate backwards from tCA
     // Create larger scenario database
 
-    xp_t0    = InitialXp(Scenario, Mu, Lsc);                            // Obtain initial state primary
+    int k = 0;
+    int NumPoints = 100;
+    xp_t0    = InitialXp(Scenario, Mu, Lsc, k, NumPoints);                            // Obtain initial state primary
     xs_t0    = InitialXs(Scenario, Mu, Lsc);                            // Obtain initial state secondary
     tCA_Nom  = Initialtca(Scenario, Mu)/tsc;                           // Obtain initial tCA
     
@@ -52,7 +54,7 @@ int main( void )
     xp_tf = RK78(6, xp_t0, u_Nom, 0.0, tCA_Nom,TBAcc,MuEarth,Lsc);                  // Propagation till nominal tca (primary)
     xs_tf = RK78(6, xs_t0, {0.0, 0.0, 0.0}, 0.0, tCA_Nom,TBAcc,MuEarth,Lsc);      // Propagation till nominal tca (secondary)
     int N;                                                              // Initialise number of thrust arcs in the method 
-    N = 10000;                                                             // Number should have a relation with the eccentricity of the orbit
+    N = 100;                                                             // Number should have a relation with the eccentricity of the orbit
     // TODO: Connect N with RTN profile of control; make adaptive
 
     int DM_Case;                                                                                                  // Choose which distance metric to use for quantifying risk and determining control
@@ -108,6 +110,7 @@ int main( void )
 
     AlgebraicMatrix<double> xp_save(N+1,6), xs_save(N+1,6), u_save(N,3), xpadj_save(N,6), DeltaRB_save(N,3);   // For data saving
     AlgebraicVector<double> DM_save(N), tCA_save(N);
+    double tf_save;
 
     DA DM_NextIt, tCA_NextIt;
     AlgebraicVector<DA> DeltaRB_NextIt;
@@ -185,6 +188,7 @@ int main( void )
         DM_save[n] = DM_Evaluated_Control*Lsc*Lsc;
         tCA_save[n] = tCA_Evaluated_Control*tsc;
     }
+    tf_save = t_n;
     for(i=0;i<3;i++)
     {
         xp_save.at(N,i)    = xp_tf[i]*Lsc;
@@ -193,7 +197,7 @@ int main( void )
         xs_save.at(N,i+3)    = xs_tf[i+3]*Vsc;
     }
     // End of loop
-    FilePrint(SaveName, N, xp_save, xs_save, u_save, xpadj_save, DeltaRB_save, DM_save, tCA_save);
+    FilePrint(SaveName, N, xp_save, xs_save, u_save, xpadj_save, DeltaRB_save, DM_save, tCA_save, tf_save);
 }
     
 

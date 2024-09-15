@@ -1,5 +1,5 @@
 clc
-FileName = 'N50_Euc';
+FileName = 'N100_Julia_Val';
 
 xp     = load(['.\write_read\xp_',FileName,'.dat']);
 
@@ -24,19 +24,6 @@ DM     = load(['.\write_read\DM_',FileName,'.dat']);
 %% Just the norms of the orbits
 %normxp = sqrt(xp(2:end,1).^2+ xp(2:end,2).^2+xp(2:end,3).^2);
 DistanceNodes = sqrt((xpadj(1:(end),1)-xp(2:end,1)).^2+ (xpadj(1:(end),2)-xp(2:end,2)).^2+(xpadj(1:(end),3)-xp(2:end,3)).^2);
-
-figure()
-hold on
-plot(xpadj(1:(end),1)-xp(2:end,1))
-
-figure()
-hold on
-plot(xpadj(1:(end),2)-xp(2:end,2))
-
-figure()
-hold on
-plot(xpadj(1:(end),3)-xp(2:end,3))
-
 
 %% Norm difference over time
 figure()
@@ -94,26 +81,60 @@ for i=1:length(DeltaRB_ECI(:,1))
 end
 figure()
 grid on
-hold on
-%semilogy(t,abs(DM_From_DeltaRB(:)-DM.^(1/2)), 'LineWidth', 2)
-plot(t,DM.^(1/2), 'LineWidth', 2)
-plot(t,DM_From_DeltaRB, 'LineWidth', 2)
+%hold on
+semilogy(t,abs(DM_From_DeltaRB(:)-DM.^(1/2)), 'LineWidth', 2)
+%plot(t,DM.^(1/2), 'LineWidth', 2)
+%plot(t,DM_From_DeltaRB, 'LineWidth', 2)
 xlabel('Node number (-)', 'FontSize', 12, 'FontWeight', 'bold');
-ylabel('Distance Metric', 'FontSize', 12, 'FontWeight', 'bold');
+ylabel('Distance Metric difference', 'FontSize', 12, 'FontWeight', 'bold');
 title('DM from direct DA and from DeltaRB', 'FontSize', 14, 'FontWeight', 'bold');
 legend({'DM is a DA', 'DM from DeltaRB'}, 'Location', 'northeast', 'FontSize', 10, 'Box', 'off');
 
 %% B-plane
 figure()
-scatter3(DeltaRB_ECI(:,1),DeltaRB_ECI(:,2),DeltaRB_ECI(:,3))
+scatter(DeltaRB_ECI(:,1),DeltaRB_ECI(:,3))
 
-DummyP = ones(1,1);
 for i=1:length(DeltaRB_ECI(:,1))
     RelPos = xp(end,1:3)'-xs(end,1:3)';
     RelVel = xp(end,4:6)'-xs(end,4:6)';
     DeltaRB_BPlane(i,:) = ECI2B(DeltaRB_ECI(i,:)',RelPos,RelVel,xs(end,1:3)');
 end
 
-figure()
-scatter(DeltaRB_BPlane(:,1),DeltaRB_BPlane(:,3))
-axis equal
+tf = 50:50:5000;
+endPoint = 50;
+
+SafeDis = 1;
+Angle = 0:0.01:2*pi;
+
+xSafe = cos(Angle).*SafeDis;
+ySafe = sin(Angle).*SafeDis;
+
+% Create figure
+figure();
+hold on;
+
+% Plot safety circle
+scatter(xSafe, ySafe, 2, 'k', 'DisplayName', 'Safety');
+
+% Plot relative positions with color gradient based on time
+scatter(DeltaRB_BPlane((end-endPoint+1):end,1), DeltaRB_BPlane((end-endPoint+1):end,3), 50, tf(1:endPoint)', 'filled', 'DisplayName', 'Primary');
+
+% Plot secondary object at (0,0)
+scatter(0, 0, 100, 'r', 'filled', 'DisplayName', 'Secondary');
+
+% Add labels and title
+xlabel('B1 axis [km]');
+ylabel('B2 axis [km]');
+title('Time till safety, DA first order control, 1e-4 m/s² thrust');
+
+% Add color bar for time
+c = colorbar;
+c.Label.String = 'Time till safety [s]';
+
+% Add legend
+legend();
+
+% Set axis equal for better representation of circles
+axis equal;
+hold off;
+
