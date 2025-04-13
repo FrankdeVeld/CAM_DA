@@ -10,7 +10,7 @@ using namespace DACE;
 int main( void )
 {   
     //////////////////////////////////////////////////////////////// START OF INITIALISATION ///////////////////////////////////////////////////////////////////////////////
-    string SaveName = "N100_Julia_Val_T1em8";
+    string SaveName = "AASPaperTest";
   
     int i;
     int j;
@@ -34,6 +34,7 @@ int main( void )
 
     double ThrustMagnitude = 1e-8/Asc;                                      // Thrust magntiude                         [km/s^3]
     int Scenario = 2;                                                   // Initial condition scenarios
+    // Scenario 2: ISS kind of orbit
     // TODO: automate (ideally) -> automated tCA computation, or propagate backwards from tCA
     // Create larger scenario database
 

@@ -1,0 +1,32 @@
+\begin{thebibliography}{1}
+
+\bibitem{dell2024characterization}
+L.~Dell'Elce, F.~d.~Veld, and J.-B. Pomet, ``Characterization of the minimum
+  warning time for low-thrust collision avoidance maneuvers,''  {\em
+  Astrodynamics specialist conference}, 2024.
+
+\bibitem{pavanello2024}
+Z.~Pavanello and L.~Pirovano, ``Recursive Polynomial Method for Fast Collision
+  Avoidance Maneuver Design,''  {\em arXiv preprint}, 2024.
+
+\bibitem{Mahfouz2025}
+A.~Mahfouz, G.~Gaias, and H.~Voos, ``Fuel-optimal formation reconfiguration by
+  means of unidirectional low-thrust propulsion system,''  {\em Journal of
+  Guidance, Control, and Dynamics}, 2025.
+
+\bibitem{paduraru2024}
+C.~Paduraru and A.~Solomon, ``Collision Avoidance and Return Manoeuvre
+  Optimisation for Low-Thrust Satellites using Reinforcement Learning,''  {\em
+  ResearchGate}, 2024.
+
+\bibitem{pavanello2024b}
+Z.~Pavanello, L.~Pirovano, R.~Armellin, and A.~D. Vittori, ``Collision
+  Avoidance Maneuvers Optimization in the Presence of Multiple Encounters,''
+  {\em arXiv preprint}, 2024.
+
+\bibitem{symonds2014operational}
+K.~G. Symonds, T.~Flohrer, N.~Mardle, D.~Fornarelli, X.~Marc, and T.~Ormston,
+  ``Operational reality of collision avoidance manoeuvres,''  {\em SpaceOps
+  2014 Conference}, 2014, p.~1746.
+
+\end{thebibliography}
