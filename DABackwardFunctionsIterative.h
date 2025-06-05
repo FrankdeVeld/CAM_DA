@@ -51,6 +51,68 @@ template <typename T> T atan2_mod(T a, T b) {
 }
 
 
+// Helper function for 3x3 matrix determinant
+template<typename T>
+T det3x3(const std::vector<std::vector<T>>& A) {
+    if (A.size() != 3 || A[0].size() != 3 || A[1].size() != 3 || A[2].size() != 3) {
+        throw std::runtime_error("Matrix must be 3x3 for det3x3");
+    }
+    return A[0][0] * (A[1][1] * A[2][2] - A[1][2] * A[2][1]) -
+           A[0][1] * (A[1][0] * A[2][2] - A[1][2] * A[2][0]) +
+           A[0][2] * (A[1][0] * A[2][1] - A[1][1] * A[2][0]);
+}
+
+// Helper function for 3x3 matrix inverse
+// Returns an empty vector if matrix is singular
+template<typename T>
+std::vector<std::vector<T>> inv3x3(const std::vector<std::vector<T>>& A) {
+    if (A.size() != 3 || A[0].size() != 3 || A[1].size() != 3 || A[2].size() != 3) {
+        throw std::runtime_error("Matrix must be 3x3 for inv3x3");
+    }
+
+    T determinant = det3x3(A);
+    // Use a tolerance check for singularity
+    if (std::abs(determinant) < std::numeric_limits<T>::epsilon() * 100) { // Added tolerance
+        return {}; // Return empty vector indicating singularity
+    }
+
+    T invDet = 1.0 / determinant;
+    std::vector<std::vector<T>> invA(3, std::vector<T>(3));
+
+    invA[0][0] = (A[1][1] * A[2][2] - A[1][2] * A[2][1]) * invDet;
+    invA[0][1] = (A[0][2] * A[2][1] - A[0][1] * A[2][2]) * invDet;
+    invA[0][2] = (A[0][1] * A[1][2] - A[0][2] * A[1][1]) * invDet;
+    invA[1][0] = (A[1][2] * A[2][0] - A[1][0] * A[2][2]) * invDet;
+    invA[1][1] = (A[0][0] * A[2][2] - A[0][2] * A[2][0]) * invDet;
+    invA[1][2] = (A[0][2] * A[1][0] - A[0][0] * A[1][2]) * invDet;
+    invA[2][0] = (A[1][0] * A[2][1] - A[1][1] * A[2][0]) * invDet;
+    invA[2][1] = (A[0][1] * A[2][0] - A[0][0] * A[2][1]) * invDet;
+    invA[2][2] = (A[0][0] * A[1][1] - A[0][1] * A[1][0]) * invDet;
+
+    return invA;
+}
+
+// Helper function for vector normalization (returns zero vector if input norm is ~0)
+AlgebraicVector<double> normalizeVector(const AlgebraicVector<double>& v) {
+    double norm_val = v.vnorm();
+    if (norm_val < std::numeric_limits<double>::epsilon() * 100) { // Added tolerance
+        return AlgebraicVector<double>{0.0, 0.0, 0.0}; // Return zero vector
+    }
+    return v / norm_val;
+}
+
+// Helper function for matrix-vector product H_inv * g
+AlgebraicVector<double> matVecProd(const std::vector<std::vector<double>>& A, const AlgebraicVector<double>& v) {
+     if (A.size() != 3 || A[0].size() != 3 || v.size() != 3) {
+        throw std::runtime_error("Matrix must be 3x3 and vector size 3 for matVecProd");
+    }
+    AlgebraicVector<double> result(3);
+    result[0] = A[0][0] * v[0] + A[0][1] * v[1] + A[0][2] * v[2];
+    result[1] = A[1][0] * v[0] + A[1][1] * v[1] + A[1][2] * v[2];
+    result[2] = A[2][0] * v[0] + A[2][1] * v[1] + A[2][2] * v[2];
+    return result;
+}
+
 
 
 template<typename T, typename U>
@@ -411,16 +473,20 @@ template<typename T> T det2(AlgebraicMatrix<T> M)
     return det;
 }
 
-template<typename T, typename U> T ConstPoC(AlgebraicVector<T> r, AlgebraicMatrix<U> P, double R){
+template<typename T, typename U> T ConstPoC(AlgebraicVector<T> DeltaRB, AlgebraicMatrix<U> P, double R){
   
     // Constant PoC on B-plane
     AlgebraicMatrix<U> P_inv(2,2);
     U det = det2(P);
     P_inv = P.inv();
     
-    T smd = r.dot(P_inv*r);
-    T PoC = R*R/(2*sqrt(det))*exp(-smd/2);
-    
+    AlgebraicVector<DA> DeltaRBRightComp(2);
+    DeltaRBRightComp[0] = DeltaRB[0];
+    DeltaRBRightComp[1] = DeltaRB[2];
+
+    T smd2 = DeltaRBRightComp.dot(P_inv*DeltaRBRightComp);
+    T PoC = R*R/(2*M_PI*sqrt(det))*exp(-smd2/2);
+
     return PoC;
 }
 
@@ -486,11 +552,28 @@ double Initialtca(int Scenario,double MuEarth) {
     switch(Scenario) {
         case 1:
             {
-            tca = 3600;
+            tca = 4000;
+            break;
+            }
+        case 2:
+            {
+            tca = 1200;
             break;
             }
     }
     return tca;
+}
+
+double InitialDM(int Scenario, double Lsc) {
+    double DM; 
+    switch(Scenario) {
+        case 1:
+            {
+            DM = 0.5/Lsc/Lsc;
+            break;
+            }
+    }
+    return DM;
 }
 
 AlgebraicVector<double> InitialXs(int Scenario,double MuEarth, double Lsc) {
@@ -514,14 +597,29 @@ AlgebraicVector<double> InitialXs(int Scenario,double MuEarth, double Lsc) {
 
             // Secondary initial position, guaranteeing a collision at tca 
             xs_t0 = RK78(6, xs_tf, {0.0, 0.0, 0.0}, 0.0, -tCA_Nom,TBAcc,MuEarth,Lsc);     
-            // Nominal miss distance: 500 m
+            // Nominal miss distance: 50 m
+            break;
+            }
+        case 2:
+            {
+            xs_tf[0] = -1843.63111; // ISS kind of orbit
+            xs_tf[1] = -6438.72745;
+            xs_tf[2] = -1034.88661;
+            xs_tf[3] = 4.872312236;
+            xs_tf[4] = 0.450317177;  // at apogee
+            xs_tf[5] = -5.911324142;
+            double tCA_Nom  = Initialtca(Scenario, MuEarth);                           // Obtain initial tCA
+
+            // Secondary initial position, guaranteeing a collision at tca 
+            xs_t0 = RK78(6, xs_tf, {0.0, 0.0, 0.0}, 0.0, -tCA_Nom,TBAcc,MuEarth,Lsc);     
+            // Nominal miss distance: 50 m
             break;
             }
     }
     return xs_t0;
 }
 
-AlgebraicVector<double> InitialXp(int Scenario,double MuEarth, double Lsc) {
+AlgebraicVector<double> InitialXp(int Scenario,double MuEarth, double Lsc, int k, int NumPoints) {
     AlgebraicVector<double> xp_t0(6);
     AlgebraicVector<double> xp_tf(6);
     switch(Scenario) {
@@ -530,20 +628,67 @@ AlgebraicVector<double> InitialXp(int Scenario,double MuEarth, double Lsc) {
             // Set initial conditions
             const double eccp = 0.1;
 
-            const double prim  = 8000.5;               
-            // Secondary final position
-            xp_tf[0] = prim; // sec km altitude
-            xp_tf[1] = 0.0;
+            const double prim  = 8000;
+
+            double angle;
+            angle = static_cast<double>(k)/NumPoints*2.0*M_PI;
+            // Primary final position
+            xp_tf[0] = prim + 0.05*cos(angle); //prim km altitude
+            xp_tf[1] = 0.-5*sin(angle);
             xp_tf[2] = 0.0;
             xp_tf[3] = 0.0;
             xp_tf[4] = 0.0;  // at apogee
             xp_tf[5] = -sqrt(MuEarth/abs(prim))*sqrt(1-eccp);
             double tCA_Nom  = Initialtca(Scenario, MuEarth);                           // Obtain initial tCA
 
-            // Secondary initial position, guaranteeing a collision at tca 
+            // Primary initial position, guaranteeing a collision at tca 
             xp_t0 = RK78(6, xp_tf, {0.0, 0.0, 0.0}, 0.0, -tCA_Nom,TBAcc,MuEarth,Lsc);     
-            // Nominal miss distance: 500 m  
-            }                  
+            // Nominal miss distance: 50 m  
+            }       
+        case 2:
+            {
+            double angle;
+            angle = -M_PI/2;//static_cast<double>(k)/NumPoints*2.0*M_PI;
+            AlgebraicVector<double> xs_t0(6), xs_tf(6);
+            double tCA_Nom  = Initialtca(Scenario, MuEarth); // Obtain initial tCA
+            xs_t0 = InitialXs(2,MuEarth,Lsc);
+            xs_tf = RK78(6, xs_t0, {0.0, 0.0, 0.0}, 0.0, tCA_Nom,TBAcc,MuEarth,Lsc);
+            // Primary final position
+            xp_tf[0] = -1843.63111; // ISS kind of orbit
+            xp_tf[1] = -6438.72745;
+            xp_tf[2] = -1034.88661;
+            xp_tf[3] = 4.872312236;
+            xp_tf[4] = -0.450317177;  // at apogee
+            xp_tf[5] = -5.911324142;
+
+
+            // With B-plane initial changes
+            AlgebraicVector<double> dv(3);
+            AlgebraicVector<double> Direction(3);
+            for (int i=0; i<3;i++){
+                Direction[i] = 0;
+                dv[i] = xp_tf[i+3] - xs_tf[i+3];
+            } 
+            Direction[0] = 1;
+
+            AlgebraicVector<double> RandomBVec1(3);
+            AlgebraicVector<double> RandomBVec2(3);
+            RandomBVec1 = DACE::cross(dv,Direction);
+            RandomBVec1 = RandomBVec1/RandomBVec1.vnorm();
+            RandomBVec2 = DACE::cross(dv,RandomBVec1);
+            RandomBVec2 = RandomBVec2/RandomBVec2.vnorm();
+
+            AlgebraicVector<double> InitVec(3);
+            InitVec = RandomBVec1 * 0.05*cos(angle) + RandomBVec2 * 0.05*sin(angle);
+
+            for (int i=0; i<3;i++){
+                xp_tf[i] = xp_tf[i] + InitVec[i];
+            } 
+
+            // Primary initial position, guaranteeing a collision at tca 
+            xp_t0 = RK78(6, xp_tf, {0.0, 0.0, 0.0}, 0.0, -tCA_Nom,TBAcc,MuEarth,Lsc);     
+            // Nominal miss distance: 50 m  
+            }               
     }
     return xp_t0;
 }
@@ -581,12 +726,52 @@ tuple<DA, AlgebraicVector<DA>, AlgebraicVector<DA>> tcaInversion(int tCAHandling
     return std::make_tuple(tCA_tn, xp_tCA_DA, xs_tCA_DA);
 }
 
+double FilePrintTTSSimple(string SaveName, int NumPoints, AlgebraicMatrix<double> xpf_save_mat, AlgebraicMatrix<double> xsf_save_mat, AlgebraicVector<double> tf_save_vec){
+    int i;
+    int j;
+    ofstream xp, xs, tf;
+    string xpFileName = "./write_read/xpf_" + SaveName + ".dat";
+    xp.open(xpFileName);
+    xp << setprecision(16);
+    for (i=0; i<NumPoints; i++)
+    {
+        for(j=0; j<6;j++)
+        {
+            xp << xpf_save_mat.at(i,j) << " ";
+        }
+        xp << endl;
+    }
+    xp.close();
 
-double FilePrint(string SaveName, int N, AlgebraicMatrix<double> xp_save, AlgebraicMatrix<double> xs_save, AlgebraicMatrix<double> u_save, AlgebraicMatrix<double> xpadj_save, AlgebraicMatrix<double> DeltaRB_save, AlgebraicVector<double> DM_save, AlgebraicVector<double> tCA_save)
+    string xsFileName = "./write_read/xsf_" + SaveName + ".dat";
+    xs.open(xsFileName);
+    xs << setprecision(16);
+    for (i=0; i<NumPoints; i++)
+    {
+        for(j=0; j<6;j++)
+        {
+            xs << xsf_save_mat.at(i,j) << " ";
+        }
+        xs << endl;
+    }
+    xs.close();
+
+    string tfFileName = "./write_read/tf_" + SaveName + ".dat";
+    tf.open(tfFileName);
+    tf << setprecision(16);
+    for (i=0; i<NumPoints; i++){
+        tf << tf_save_vec[i] << endl;
+    }
+
+    tf.close();
+    return 1;
+}
+
+double FilePrint(string SaveName, int N, AlgebraicMatrix<double> xp_save, AlgebraicMatrix<double> xs_save, AlgebraicMatrix<double> u_save, AlgebraicMatrix<double> xpadj_save, AlgebraicMatrix<double> DeltaRB_save, AlgebraicVector<double> DM_save, AlgebraicVector<double> tCA_save, double tf_save)
 {
     int i;
     int j;
-    ofstream xp, xs, u, xpadj, DM, tCA, deltar;
+    ofstream xp, xs, u, xpadj, DM, tCA, tf, deltar;
     string xpFileName = "./write_read/xp_" + SaveName + ".dat";
     xp.open(xpFileName);
     xp << setprecision(16);
@@ -657,6 +842,12 @@ double FilePrint(string SaveName, int N, AlgebraicMatrix<double> xp_save, Algebr
     }
     tCA.close();
 
+    string tfFileName = "./write_read/tf_" + SaveName + ".dat";
+    tf.open(tfFileName);
+    tf << setprecision(16);
+    tf << tf_save << endl;
+    tf.close();
+
     string deltarFileName = "./write_read/DeltaRB_" + SaveName + ".dat";
     deltar.open(deltarFileName);
     deltar << setprecision(16);
@@ -682,7 +873,10 @@ DA Distance_Metric(int DM_Case,AlgebraicVector<DA> DeltaRB, AlgebraicMatrix<doub
         }
         case 2: // SMD
         {
-            DM = dot(DeltaRB,P.inv() * DeltaRB);
+            AlgebraicVector<DA> DeltaRBRightComp(2);
+            DeltaRBRightComp[0] = DeltaRB[0];
+            DeltaRBRightComp[1] = DeltaRB[2];
+            DM = dot(DeltaRBRightComp,P.inv() * DeltaRBRightComp);
             break;
         }
         case 3: // PoC
@@ -733,14 +927,74 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
             DeltaRB[i] = xp_tnp1_DA[i] - xs_tnp1_DA[i];
         }
         DM          = Distance_Metric(DM_Case,DeltaRB,P,R);
-
         ConvRadius = DM.eval(ConvRadiusEval).convRadius(1e-8,2);
-        //cout << "ConvRadius: " << ConvRadius << endl;
-        // The distance metric is now a Taylor polynomial of dr(tn), dv(tn) and du(tn) 
 
+        // The distance metric is now a Taylor polynomial of dr(tn), dv(tn) and du(tn) 
+        bool SecondOrder = false;
         // In first-order approximation, the control can be derived from the partial derivative of the DA object DM
-        for (i=0; i<3; i++){
-            u_OptFO_tn[i] = cons(DM.deriv(7+i));                                                     // The control is defined in the RTN reference frame
+        if (DM_Case == 3) { 
+            if(SecondOrder) {
+                        // 1. Extract Gradient g = d(DM)/d(u_i) at u=0
+                AlgebraicVector<double> g(3);
+                for (int i = 0; i < 3; ++i) {
+                    g[i] = cons(DM.deriv(7 + i));
+                }
+
+                // 2. Extract Hessian H_ij = d^2(DM)/d(u_i)d(u_j) at u=0
+                std::vector<std::vector<double>> H(3, std::vector<double>(3));
+                for (int i = 0; i < 3; ++i) {
+                    for (int j = 0; j < 3; ++j) {
+                        // Note: DA derivative indices are 1-based
+                        H[i][j] = cons(DM.deriv(7 + i).deriv(7 + j));
+                    }
+                }
+
+                // 3. Calculate Control Direction 'd'
+                AlgebraicVector<double> d(3); // This will be the desired direction vector
+                const double det_tolerance = std::numeric_limits<double>::epsilon() * 1000; // Tolerance for determinant check
+
+                // Attempt to calculate Newton direction: d_newton = -H^{-1} * g
+                std::vector<std::vector<double>> H_inv = inv3x3(H);
+
+                if (!H_inv.empty()) { // Check if Hessian was invertible
+                    // Hessian is invertible, use Newton direction
+                    d = matVecProd(H_inv, g);
+                    d = -1.0 * d; // Newton step is -H_inv * g
+
+                    // Optional Sanity Check (for minimization like PoC):
+                    // If H is positive definite, Newton direction should align with -g
+                    // If H is negative definite, Newton direction should align with g
+                    // If H is indefinite, Newton direction might be misleading.
+                    // A simple check: Does Newton step reduce/increase DM as expected?
+                    // Or check alignment with gradient: dot(d_newton, g)
+                    // For simplicity here, we just use the calculated Newton direction if H is invertible.
+
+                    // Handle case where Newton step itself is zero vector
+                    if (d.vnorm() < std::numeric_limits<double>::epsilon() * 100) {
+                        // Newton step is zero, fallback to gradient
+                        if (DM_Case == 3) { // Minimize PoC
+                            d = -1.0 * g;
+                        } else { // Maximize Distance
+                            d = g;
+                        }
+                    }
+
+                } else {
+                    // Hessian is singular or ill-conditioned, fallback to gradient direction
+                    d = -1.0 * g;    // Steepest descent
+                }
+                for (int i = 0; i < 3; i++) { // Loop for i from 0 to 2
+                    u_OptFO_tn[i] = g[i]; // Negative control value in RTN frame
+                }
+            } else {
+                for (int i = 0; i < 3; i++) { // Loop for i from 0 to 2
+                    u_OptFO_tn[i] = -cons(DM.deriv(7 + i)); // Negative control value in RTN frame
+                }
+            }
+        } else {
+            for (int i = 0; i < 3; i++) { // Loop for i from 0 to 2
+                u_OptFO_tn[i] = cons(DM.deriv(7 + i)); // Positive control value in RTN frame
+            }
         }
         u_OptFO_tn = u_OptFO_tn/u_OptFO_tn.vnorm();                                                      // Normalise the control; we set the magnitude independently
 
@@ -777,12 +1031,76 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
         DM                            = DM.eval(Evaluated_CurrentIt);                                   // Evaluation of EucDis from previous iteration with dependencies of current iteration
         tCA                           = tCA.eval(Evaluated_CurrentIt);                                   // Evaluation of EucDis from previous iteration with dependencies of current iteration
         DeltaRB                       = DeltaRB.eval(Evaluated_CurrentIt);                                   // Evaluation of EucDis from previous iteration with dependencies of current iteration
-        
+        bool SecondOrder = false;
         ConvRadius = DM.eval(ConvRadiusEval).convRadius(1e-8,2);
         //cout << "ConvRadius: " << ConvRadius << endl;
         // In first-order approximation, the control can be derived from the partial derivative of the DA object EucDis
-        for (i=0; i<3; i++){
-            u_OptFO_tn[i] = cons(DM.deriv(7+i));                                           // The control is defined in the RTN reference frame
+        if (DM_Case == 3) { 
+            if(SecondOrder) {
+                // 1. Extract Gradient g = d(DM)/d(u_i) at u=0
+                AlgebraicVector<double> g(3);
+                for (int i = 0; i < 3; ++i) {
+                    g[i] = cons(DM.deriv(7 + i));
+                }
+
+                // 2. Extract Hessian H_ij = d^2(DM)/d(u_i)d(u_j) at u=0
+                std::vector<std::vector<double>> H(3, std::vector<double>(3));
+                for (int i = 0; i < 3; ++i) {
+                    for (int j = 0; j < 3; ++j) {
+                        // Note: DA derivative indices are 1-based
+                        H[i][j] = cons(DM.deriv(7 + i).deriv(7 + j));
+                    }
+                }
+
+                // 3. Calculate Control Direction 'd'
+                AlgebraicVector<double> d(3); // This will be the desired direction vector
+                const double det_tolerance = std::numeric_limits<double>::epsilon() * 1000; // Tolerance for determinant check
+
+                // Attempt to calculate Newton direction: d_newton = -H^{-1} * g
+                std::vector<std::vector<double>> H_inv = inv3x3(H);
+
+                if (!H_inv.empty()) { // Check if Hessian was invertible
+                    // Hessian is invertible, use Newton direction
+                    d = matVecProd(H_inv, g);
+                    d = -1.0 * d; // Newton step is -H_inv * g
+
+                    // Optional Sanity Check (for minimization like PoC):
+                    // If H is positive definite, Newton direction should align with -g
+                    // If H is negative definite, Newton direction should align with g
+                    // If H is indefinite, Newton direction might be misleading.
+                    // A simple check: Does Newton step reduce/increase DM as expected?
+                    // Or check alignment with gradient: dot(d_newton, g)
+                    // For simplicity here, we just use the calculated Newton direction if H is invertible.
+
+                    // Handle case where Newton step itself is zero vector
+                    if (d.vnorm() < std::numeric_limits<double>::epsilon() * 100) {
+                        // Newton step is zero, fallback to gradient
+                        if (DM_Case == 3) { // Minimize PoC
+                            d = -1.0 * g;
+                        } else { // Maximize Distance
+                            d = g;
+                        }
+                    }
+
+                } else {
+                    // Hessian is singular or ill-conditioned, fallback to gradient direction
+                    d = -1.0 * g;    // Steepest descent
+                }
+                for (int i = 0; i < 3; i++) { // Loop for i from 0 to 2
+                    u_OptFO_tn[i] = g[i]; // Negative control value in RTN frame
+                }
+            } else {
+                // cout << "It: " << n << endl;
+                for (int i = 0; i < 3; i++) { // Loop for i from 0 to 2
+                    u_OptFO_tn[i] = -cons(DM.deriv(7 + i)); // Negative control value in RTN frame
+                    // cout << "cons(DM.deriv(7 + i)): " << cons(DM.deriv(7 + i)) << endl;
+                }
+            }
+            // cout << " " << endl;
+        } else {
+            for (int i = 0; i < 3; i++) { // Loop for i from 0 to 2
+                u_OptFO_tn[i] = cons(DM.deriv(7 + i)); // Positive control value in RTN frame
+            }
         }
         u_OptFO_tn = u_OptFO_tn/u_OptFO_tn.vnorm();                                                      // Normalise the control; we set the magnitude independently
 
@@ -794,6 +1112,7 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
         }
 
         DM_Evaluated_Control                    = DM.eval(Evaluated_Control);
+        cout << DM_Evaluated_Control*6378*6378  << endl;
         tCA_Evaluated_Control                   = tCA.eval(Evaluated_Control);
         DeltaRB_Evaluated_Control               = DeltaRB.eval(Evaluated_Control);
         xp_tnp1_Evaluated_Control               = xp_tnp1_DA.eval(Evaluated_Control);

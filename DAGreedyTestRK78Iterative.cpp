@@ -10,11 +10,11 @@ using namespace DACE;
 int main( void )
 {   
     //////////////////////////////////////////////////////////////// START OF INITIALISATION ///////////////////////////////////////////////////////////////////////////////
-    string SaveName = "AASPaperTest";
+    string SaveName = "AASTestEUC";
   
     int i;
     int j;
-    DA::init( 2, 10 );                                                   // DA(1:6) = xp(tn), DA(7:9) = u(tn),  DA(10) = tCA(tn) 
+    DA::init( 4, 10 );                                                   // DA(1:6) = xp(tn), DA(7:9) = u(tn),  DA(10) = tCA(tn) 
     double Mu      = 398600;                                            // Gravitational parameter of the Earth     [km^3/s^2]
     double Lsc     = 6378; // km                                                 // Length scale [currently unused]
     double Vsc     = sqrt(Mu/Lsc);
@@ -32,14 +32,13 @@ int main( void )
     
     double MuEarth = 1;
 
-    double ThrustMagnitude = 1e-8/Asc;                                      // Thrust magntiude                         [km/s^3]
+    double ThrustMagnitude = 1e-7/Asc;                                      // Thrust magntiude                         [km/s^2]
     int Scenario = 2;                                                   // Initial condition scenarios
-    // Scenario 2: ISS kind of orbit
     // TODO: automate (ideally) -> automated tCA computation, or propagate backwards from tCA
     // Create larger scenario database
 
     int k = 0;
-    int NumPoints = 100;
+    int NumPoints = 500;
     xp_t0    = InitialXp(Scenario, Mu, Lsc, k, NumPoints);                            // Obtain initial state primary
     xs_t0    = InitialXs(Scenario, Mu, Lsc);                            // Obtain initial state secondary
     tCA_Nom  = Initialtca(Scenario, Mu)/tsc;                           // Obtain initial tCA
@@ -94,20 +93,34 @@ int main( void )
     AlgebraicVector<DA> Evaluated_tCA(10);                                                           
 
     double  R; // Hard-body radius
-    AlgebraicMatrix<double> P(3,3); // Covariance matrix
-    P.at(0,0)      = 1;
-    P.at(0,1)      = 0.05; 
-    P.at(0,2)      = 0.04; 
-    P.at(1,0)      = P.at(0,1);
-    P.at(1,1)      = 0.9; 
-    P.at(1,2)      = 0.045; 
-    P.at(2,0)      = P.at(0,2);
-    P.at(2,1)      = P.at(1,2); 
-    P.at(2,2)      = 0.75; 
-    P = P*1e-6; // Small values
-    // Symmetric covariance matrix
+    AlgebraicMatrix<double> P(2,2); // Covariance matrix ON B PLANE
+    // P.at(0,0)      = pow(100,2)/1000/1000/Lsc/Lsc;//1;
+    // P.at(0,1)      = 100*75*0.4/1000/1000/Lsc/Lsc;//0.05; 
+    // P.at(0,2)      = 100*60*0.6/1000/1000/Lsc/Lsc; //0.04; 
+    // P.at(1,0)      = P.at(0,1);
+    // P.at(1,1)      = pow(75,2)/1000/1000/Lsc/Lsc; // 0.9; 
+    // P.at(1,2)      = 75*60*0.55s/1000/1000/Lsc/Lsc;//0.045; 
+    // P.at(2,0)      = P.at(0,2);
+    // P.at(2,1)      = P.at(1,2); 
+    // P.at(2,2)      = pow(70,2)/1000/1000/Lsc/Lsc;//0.75; 
+          
+    // Example: Scaled Identity Covariance
+    // double p_diag_scaled = pow(80,2)/1000/1000/Lsc/Lsc; // e.g., 80m std dev scaled
+    // P.at(0,0) = p_diag_scaled, P.at(1,1) = p_diag_scaled, P.at(2,2) = p_diag_scaled;
+    // P.at(0,1)=0; P.at(0,2)=0; P.at(1,0)=0; P.at(1,2)=0; P.at(2,0)=0; P.at(2,1)=0; // Ensure it's diagonal
 
-    R = 0.002; // Hard-body radius
+    P.at(0,0)      = pow(100,2)/1000/1000/Lsc/Lsc;//1;
+    P.at(0,1)      = 100*75*0.4/1000/1000/Lsc/Lsc;//0.05; 
+    P.at(1,0)      = P.at(0,1);
+    P.at(1,1)      = pow(75,2)/1000/1000/Lsc/Lsc; // 0.9; 
+
+    
+    //P = P*1e-6; // Small values
+    // Symmetric covariance matrix
+    // TODO RESCALE!! UNREALISTIC VALUES 
+
+    R = 0.002/Lsc; // Hard-body radius
+    //R = 0.002/Lsc; // Hard-body radius
 
     AlgebraicMatrix<double> xp_save(N+1,6), xs_save(N+1,6), u_save(N,3), xpadj_save(N,6), DeltaRB_save(N,3);   // For data saving
     AlgebraicVector<double> DM_save(N), tCA_save(N);
@@ -186,7 +199,11 @@ int main( void )
             u_save.at(n,i)       = u_OptFO_tn[i];
             DeltaRB_save.at(n,i) = DeltaRB_Evaluated_Control[i]*Lsc;
         }
-        DM_save[n] = DM_Evaluated_Control*Lsc*Lsc;
+        if(DM_Case == 1){
+            DM_save[n] = DM_Evaluated_Control*Lsc*Lsc;
+        } else {
+            DM_save[n] = DM_Evaluated_Control; 
+        }
         tCA_save[n] = tCA_Evaluated_Control*tsc;
     }
     tf_save = t_n;
