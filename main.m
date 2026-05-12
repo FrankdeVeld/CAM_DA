@@ -1,11 +1,12 @@
 clear
 close all
 clc
-addpath(genpath('.\OrbitalDynamics'))
-addpath(genpath('.\PoCIntegrals'))
+addpath(genpath('.\Functions'))
+addpath(genpath('.\Functions\OrbitalDynamics'))
+addpath(genpath('.\Functions\PoCIntegrals'))
 
 %% Initialisation
-[primary,secondary] = generateInitShort(243);
+[primary,secondary] = generateInitShort(1);
 
 % Non-dimensionalization
 Lsc   = primary.a;
@@ -30,7 +31,7 @@ md_lim  = 1; %km
 pocLim  = 1e-6; 
 smdLim  = PoC2SMD(Pb,HBR,pocLim, 5, 1, 1e-3, 200); 
 nx_orb  = 60;
-n_orb   = .5;
+n_orb   = 1;
 
 % Write json input
 input         = struct();
@@ -44,8 +45,13 @@ input.xp_tCA  = x_p';
 input.xs_tCA  = x_s';
 input.P       = cov;
 input.HBR     = HBR;
-input.lim     = (md_lim/Lsc)^2;
 input.metric_case = 2;
+input.breakOnThreshold = 0;
+if input.metric_case == 1
+    input.lim = (md_lim/Lsc)^2;
+else
+    input.lim = smdLim;
+end
 input.tCAHandling = 2;
 
 fid = fopen('./input.json','w'); 
@@ -59,7 +65,8 @@ fclose(fid);
 
 %% Validation and postprocessing
 [rB_val, miss_dist_val, smd, poc] = validateBackSweep('output.json');
-
+rB_val(rB_val==0) = nan;
+rB(rB==0)         = nan;
 figure
 plot(tca.shift_s*Tsc)
 % hold on
@@ -85,4 +92,4 @@ plot(smd)
 hold on
 plot(smdLim)
 
-showEllipseBplane(Pb,smdLim,rB,rB_val,input.metric_case,Lsc);
+showEllipseBplane(Pb,input.lim,rB,rB_val,input.metric_case,Lsc);

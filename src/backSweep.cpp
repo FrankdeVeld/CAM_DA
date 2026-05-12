@@ -47,8 +47,10 @@ int main( void )
     double uMax      = jin.at("uMax").get<double>();       // [km/s^2], dimensional thrust magnitude
     double Lsc       = jin.at("Lsc").get<double>();        // [km]
     double R         = jin.at("HBR").get<double>();        // hard-body radius [km]
-    int DM_Case      = jin.at("metric_case").get<double>();        // 1=Euclidean, 2=SMD, 3=PoC
+    double lim       = jin.at("lim").get<double>();        
+    int DM_Case      = jin.at("metric_case").get<int>();        // 1=Euclidean, 2=SMD
     int tCAHandling  = jin.value("tCAHandling", 2);
+    int breakOnThreshold  = jin.at("breakOnThreshold").get<int>();        // 1=Euclidean, 2=SMD
 
     // States at TCA in dimensional units [km, km/s], 6-element arrays
     auto xptf_std = jin.at("xp_tCA").get<vector<double>>();
@@ -142,6 +144,7 @@ int main( void )
         }
         DM_save[n]  = DM_Evaluated_Control;
         tCA_save[n] = tCA_Evaluated_Control;
+        if (breakOnThreshold == 1 && DM_save[n] >= lim) {break;}
     }
 
     //////////////////////////////////////////////////////////////// WRITE JSON OUTPUT ////////////////////////////////////////////////////////////////////////////
