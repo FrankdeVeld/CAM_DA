@@ -4,9 +4,12 @@
 #include <iomanip>
 #include <iomanip>
 #include <typeinfo>
+#include "prop_utils.h"
+#include "matrix_ops.h"
+
 using namespace std;
 using namespace DACE;
-
+using namespace matops;
 //#warning This example only works if the DACE was built with support for the (non-default) AlgebraicMatrix type!
 
 double min( double a, double b ) {
@@ -435,7 +438,7 @@ template<typename T> AlgebraicVector<T> TBAcc( AlgebraicVector<T> x, AlgebraicVe
     
     //const double mu = 398600; // km^3/s^2
     
-    AlgebraicMatrix<double> R2E = rtn2eci(cons(x));
+    AlgebraicMatrix<T> R2E = rtn2eci(x);
     AlgebraicVector<T>     uECI = R2E*uRTN;
 
     res[0] = x[3];
@@ -672,7 +675,7 @@ double FilePrint(string SaveName, int N, AlgebraicMatrix<double> xp_save, Algebr
     return 1;
 }
 
-DA Distance_Metric(int DM_Case,AlgebraicVector<DA> DeltaRB, AlgebraicMatrix<double> P, double R){
+DA Distance_Metric(int DM_Case,AlgebraicVector<DA> DeltaRB, AlgebraicMatrix<DA> P, double R){
     DA DM;
     switch(DM_Case){
         case 1: // Euclidean distance
@@ -685,11 +688,11 @@ DA Distance_Metric(int DM_Case,AlgebraicVector<DA> DeltaRB, AlgebraicMatrix<doub
             DM = dot(DeltaRB,P.inv() * DeltaRB);
             break;
         }
-        case 3: // PoC
-        {
-            DM = ConstPoC(DeltaRB, P, R);
-            break;
-        }
+        // case 3: // PoC
+        // {
+        //     DM = ConstPoC(DeltaRB, P, R);
+        //     break;
+        // }
         default: // Handle unexpected DM_Case values
         {
             throw std::invalid_argument("Invalid Distance Metric");
@@ -728,11 +731,21 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
 
     // Now substitute the DA objects in the Distance Metric, evaluated at tca (if n!=N-1)
     if(n==N-1){ 
+        AlgebraicVector<DA> DeltaRB(2);
+        DeltaRB = props::bplane_distance(xp_tnp1_DA, xs_tnp1_DA);
+
+        // Project covariance onto b-plane
+        AlgebraicVector<DA> vp(3), vs(3);
         for(i=0; i<3; i++){
             // DA Vectors
-            DeltaRB[i] = xp_tnp1_DA[i] - xs_tnp1_DA[i];
+            vp[i] = xp_tnp1_DA[i];
+            vs[i] = xs_tnp1_DA[i];
         }
-        DM          = Distance_Metric(DM_Case,DeltaRB,P,R);
+        AlgebraicMatrix<DA> e2b3 = props::eci2Bplane(vp, vs);
+        AlgebraicMatrix<DA> e2b(2,3); for (i=0; i<2; i++){ for (j=0; j<3; j++) { e2b.at(i,j) = e2b3.at(i,j);}}
+        AlgebraicMatrix<DA> Pb = similarity(e2b, P);
+
+        DM          = Distance_Metric(DM_Case,DeltaRB,Pb,R);
 
         ConvRadius = DM.eval(ConvRadiusEval).convRadius(1e-8,2);
         //cout << "ConvRadius: " << ConvRadius << endl;

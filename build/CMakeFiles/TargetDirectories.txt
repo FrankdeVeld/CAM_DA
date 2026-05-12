@@ -1,0 +1,3 @@
+/mnt/c/Users/Zenoj/Documenti/GitHub/CAM_DA/build/CMakeFiles/backSweep.dir
+/mnt/c/Users/Zenoj/Documenti/GitHub/CAM_DA/build/CMakeFiles/edit_cache.dir
+/mnt/c/Users/Zenoj/Documenti/GitHub/CAM_DA/build/CMakeFiles/rebuild_cache.dir
