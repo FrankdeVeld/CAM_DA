@@ -2,61 +2,24 @@ clear
 close all
 clc
 addpath(genpath('.\Functions'))
-addpath(genpath('.\Functions\OrbitalDynamics'))
-addpath(genpath('.\Functions\PoCIntegrals'))
 
 %% Initialisation
+
+%Parameters
+params = struct( ...
+    'ctrlMax_dim', 1e-7, ...
+    'md_lim_dim',  1, ...
+    'pocLim', 1e-6, ... 
+    'nx_orb', 60, ...
+    'n_orb', 1 ...
+    );
+
+% Scenario definition
 [primary,secondary] = generateInitShort(1);
-
-% Non-dimensionalization
-Lsc   = primary.a;
-musc  = 398600.4418;
-Vsc   = sqrt(musc/Lsc);
-Tsc   = Lsc/Vsc;
-Asc   = Vsc/Tsc;
-scale = diag([ones(3,1)./Lsc; ones(3,1)./Vsc]);
-
-x_p     = scale*primary.x0;
-x_s     = scale*secondary.x0;
-r2ep    = rtn2eci(x_p(1:3),x_p(4:6));
-r2es    = rtn2eci(x_s(1:3),x_s(4:6));
-cov     = scale(1:3,1:3)*(r2ep*primary.C0(1:3,1:3)*r2ep'+r2es*secondary.C0(1:3,1:3)*r2es')*scale(1:3,1:3);
-e2b     = eci2Bplane(primary.x0(4:6),secondary.x0(4:6)); 
-e2b     = e2b([1 3],:);
-Pb      = e2b*cov*e2b';
-ctrlMax = 1e-7/Asc;
-T       = primary.T/Tsc;
-HBR     = (primary.HBR + secondary.HBR)/Lsc;
-md_lim  = 1; %km
-pocLim  = 1e-6; 
-smdLim  = PoC2SMD(Pb,HBR,pocLim, 5, 1, 1e-3, 200); 
-nx_orb  = 60;
-n_orb   = 1;
+scenario            = nondimensionalise(primary,secondary,params);
 
 % Write json input
-input         = struct();
-input.N       = nx_orb*n_orb+1; 
-input.Lsc     = Lsc; 
-input.et      = 659871.07119168108; 
-input.t_back  = n_orb*2*pi; 
-input.uMax    = ctrlMax;
-input.scaling = Lsc;
-input.xp_tCA  = x_p';
-input.xs_tCA  = x_s';
-input.P       = cov;
-input.HBR     = HBR;
-input.metric_case = 2;
-input.breakOnThreshold = 0;
-if input.metric_case == 1
-    input.lim = (md_lim/Lsc)^2;
-else
-    input.lim = smdLim;
-end
-input.tCAHandling = 2;
-
-fid = fopen('./input.json','w'); 
-fwrite(fid,jsonencode(input),'char'); 
-fclose(fid);
+input = write_input(scenario, params);
 
 %% Optimisation
 !wsl ./build/bin/backSweep
@@ -67,8 +30,8 @@ fclose(fid);
 [rB_val, miss_dist_val, smd, poc] = validateBackSweep('output.json');
 rB_val(rB_val==0) = nan;
 rB(rB==0)         = nan;
-figure
-plot(tca.shift_s*Tsc)
+% figure
+% plot(tca.shift_s*Tsc)
 % hold on
 % plot(dtca*Tsc)
 % hold off
@@ -80,16 +43,17 @@ legend('R','T','N')
 figure
 plot(sqrt(md))
 hold on
-plot(miss_dist_val*Lsc)
+plot(miss_dist_val*input.Lsc)
 hold off
 
 figure
 semilogy(poc)
+ylim([1e-10,1e-2])
 
 
 figure
 plot(smd)
 hold on
-plot(smdLim)
+plot(scenario.smdLim)
 
-showEllipseBplane(Pb,input.lim,rB,rB_val,input.metric_case,Lsc);
+showEllipseBplane(scenario.Pb,input.lim,rB,rB_val,input.metric_case,input.Lsc);
