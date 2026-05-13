@@ -8,12 +8,14 @@ function input = write_input(scenario, params)
     input.uMax    = scenario.ctrlMax;
     input.xp_tCA  = scenario.x_p';
     input.xs_tCA  = scenario.x_s';
+    input.rb0     = scenario.rb0';
+    input.smd0    = scenario.smd0;
     input.P       = scenario.cov;
     input.HBR     = scenario.HBR;
-    input.metric_case = 2;
-    input.breakOnThreshold = 0;
+    input.metric_case = params.metric_case;
+    input.breakOnThreshold = params.breakOnThreshold;
     if input.metric_case == 1
-        input.lim = (scenario.md_lim/Lsc)^2;
+        input.lim = scenario.md_lim^2;
     else
         input.lim = scenario.smdLim;
     end

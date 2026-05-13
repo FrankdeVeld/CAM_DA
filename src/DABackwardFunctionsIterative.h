@@ -732,18 +732,25 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
     // Now substitute the DA objects in the Distance Metric, evaluated at tca (if n!=N-1)
     if(n==N-1){ 
         AlgebraicVector<DA> DeltaRB(2);
+        AlgebraicMatrix<DA> Pb(2,2);
         DeltaRB = props::bplane_distance(xp_tnp1_DA, xs_tnp1_DA);
 
+        if (DM_Case == 2) {
         // Project covariance onto b-plane
         AlgebraicVector<DA> vp(3), vs(3);
         for(i=0; i<3; i++){
             // DA Vectors
-            vp[i] = xp_tnp1_DA[i];
-            vs[i] = xs_tnp1_DA[i];
+            vp[i] = xp_tnp1_DA[i+3];
+            vs[i] = xs_tnp1_DA[i+3];
         }
         AlgebraicMatrix<DA> e2b3 = props::eci2Bplane(vp, vs);
-        AlgebraicMatrix<DA> e2b(2,3); for (i=0; i<2; i++){ for (j=0; j<3; j++) { e2b.at(i,j) = e2b3.at(i,j);}}
-        AlgebraicMatrix<DA> Pb = similarity(e2b, P);
+        AlgebraicMatrix<DA> e2b(2,3); 
+        for (j=0; j<3; j++) {
+            e2b.at(0,j) = e2b3.at(0,j);
+            e2b.at(1,j) = e2b3.at(2,j);
+            }
+        Pb = similarity(e2b, P);
+        }
 
         DM          = Distance_Metric(DM_Case,DeltaRB,Pb,R);
 

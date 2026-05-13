@@ -140,20 +140,20 @@ template<typename T> DACE::AlgebraicMatrix<T> eci2Bplane(const DACE::AlgebraicVe
     CrossVel = DACE::cross(v_s,v_p);
 
     T nCrossVel = sqrt(CrossVel.dot(CrossVel));
-    // if (cons(nCrossVel) == 0.0) {
-    //     CrossVel[0] = 0.0;
-    //     CrossVel[1] = -eta[2];
-    //     CrossVel[2] =  eta[1];
+    if (cons(nCrossVel) == 0.0) {
+        CrossVel[0] = 0.0;
+        CrossVel[1] = -eta[2];
+        CrossVel[2] =  eta[1];
 
-    //     nCrossVel = sqrt(CrossVel.dot(CrossVel));
-    //     if (cons(nCrossVel) == 0.0) {
-    //         CrossVel[0] =  eta[2];
-    //         CrossVel[1] = 0.0;
-    //         CrossVel[2] = -eta[0];
+        nCrossVel = sqrt(CrossVel.dot(CrossVel));
+        if (cons(nCrossVel) == 0.0) {
+            CrossVel[0] =  eta[2];
+            CrossVel[1] = 0.0;
+            CrossVel[2] = -eta[0];
 
-    //         nCrossVel = sqrt(CrossVel.dot(CrossVel));
-    //     }
-    // }
+            nCrossVel = sqrt(CrossVel.dot(CrossVel));
+        }
+    }
 
     xi = CrossVel/nCrossVel;
 

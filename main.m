@@ -8,10 +8,12 @@ addpath(genpath('.\Functions'))
 %Parameters
 params = struct( ...
     'ctrlMax_dim', 1e-7, ...
-    'md_lim_dim',  1, ...
+    'md_lim_dim',  0.5, ...
     'pocLim', 1e-6, ... 
-    'nx_orb', 60, ...
-    'n_orb', 1 ...
+    'nx_orb', 30, ...
+    'n_orb', 1, ...
+    'breakOnThreshold', 1, ...
+    'metric_case', 1 ...
     );
 
 % Scenario definition
@@ -24,36 +26,10 @@ input = write_input(scenario, params);
 %% Optimisation
 !wsl ./build/bin/backSweep
 
-[control, rB, tca, md] = readBackSweepOutput('output.json');
+%%
+outSim = readBackSweepOutput('output.json',params.metric_case);
 
 %% Validation and postprocessing
-[rB_val, miss_dist_val, smd, poc] = validateBackSweep('output.json');
-rB_val(rB_val==0) = nan;
-rB(rB==0)         = nan;
-% figure
-% plot(tca.shift_s*Tsc)
-% hold on
-% plot(dtca*Tsc)
-% hold off
+validation = validateBackSweep('output.json');
 
-figure
-plot(control)
-legend('R','T','N')
-
-figure
-plot(sqrt(md))
-hold on
-plot(miss_dist_val*input.Lsc)
-hold off
-
-figure
-semilogy(poc)
-ylim([1e-10,1e-2])
-
-
-figure
-plot(smd)
-hold on
-plot(scenario.smdLim)
-
-showEllipseBplane(scenario.Pb,input.lim,rB,rB_val,input.metric_case,input.Lsc);
+mainPostprocess(outSim, validation, scenario, input, params)

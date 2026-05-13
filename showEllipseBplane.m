@@ -9,8 +9,8 @@ function [] = showEllipseBplane(PB,lim,traj,trajVal,metric,Lsc)
 figure()
 plot(traj(:,1)*Lsc,traj(:,2)*Lsc,'k')
 hold on
-plot(traj(end,1)*Lsc,traj(end,2)*Lsc,'ko')
-plot(0,0,'k*')
+plot(trajVal(end,1)*Lsc,trajVal(end,2)*Lsc,'ko','HandleVisibility','off')
+plot(0,0,'k*','HandleVisibility','off')
 plot(trajVal(:,1)*Lsc,trajVal(:,2)*Lsc,'r')
 t          = 0:0.001:2*pi;
 if metric == 1
@@ -31,6 +31,7 @@ end
 grid on
 box on
 xlabel('\xi [km]'); ylabel('\zeta [km]')
+legend('Optimisation','Validation')
 axis equal
 hold off
 end

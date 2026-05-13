@@ -1,4 +1,4 @@
-function [control, rB, tca, m_d] = readBackSweepOutput(jsonFile)
+function output = readBackSweepOutput(jsonFile,metric)
 % READBACKSWEEPOUTPUT  Read the output JSON from DAGreedyBackSweepJson and
 %                      extract nodewise control, B-plane relative position,
 %                      and TCA history as plain MATLAB arrays.
@@ -28,21 +28,38 @@ raw = jsondecode(fileread(jsonFile));
 nodes = raw.nodes;
 N = numel(nodes);
 
-control  = zeros(N, 3);
-rB       = zeros(N, 3);
-tca_shift    = zeros(N, 1);
-tca_absolute = zeros(N, 1);
-m_d             = zeros(N, 1);
-for k = 1:N
+control         = nan(N, 3);
+rB              = nan(N, 3);
+tca_shift       = nan(N, 1);
+m_d             = nan(N, 1);
+smd             = nan(N, 1);
+for k = N:-1:1
     nd = nodes(k);
     control(k, :)  = nd.controlRTN(:)';
-    rB(k, :)       = nd.relativePositionBPlane_km(:)';
-    tca_shift(k)   = nd.tcaShift_s;
-    tca_absolute(k)= nd.tcaAbsolute_s;
-    m_d(k)         = nd.dangerMetric_km2;
+    if norm(control(k, :)) == 0 && k < N
+        rB(k, :)     = rB(k+1, :);
+        tca_shift(k) = tca_shift(k+1);
+        m_d(k)       = m_d(k+1);
+        smd(k)       = smd(k+1);
+    else
+        rB(k, :)       = nd.relativePositionBPlane(:)';
+        tca_shift(k)   = nd.tcaShift;
+        if metric == 1
+            m_d(k) = nd.dangerMetric;
+            smd(k) = nan;
+        else
+            m_d(k) = norm(rB(k, :))^2;
+            smd(k) = nd.dangerMetric;
+        end
+    end
 end
-
-tca.shift_s    = tca_shift;
-tca.absolute_s = tca_absolute;
+control(end, :)  = control(end-1, :);
+output = struct( ...
+    'control',  control, ...
+    'rB',       rB, ...
+    'm_d',      m_d, ...
+    'smd',      smd, ...
+    'deltaTca', tca_shift ...
+    );
 
 end
