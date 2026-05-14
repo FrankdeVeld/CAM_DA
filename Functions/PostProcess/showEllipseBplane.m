@@ -14,7 +14,7 @@ plot(0,0,'k*')
 plot(trajVal(:,1)*Lsc,trajVal(:,2)*Lsc,'r')
 t          = 0:0.001:2*pi;
 if metric == 1
-    plot(lim*Lsc*sin(t),lim*Lsc*cos(t),'k','HandleVisibility','off')
+    plot(sqrt(lim)*Lsc*sin(t),sqrt(lim)*Lsc*cos(t),'k','HandleVisibility','off')
 else
     [semiaxes,cov2b] = defineEllipsoid(PB,lim);
     a          = semiaxes(1)*Lsc;

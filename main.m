@@ -7,14 +7,16 @@ addpath(genpath('.\Functions'))
 
 %Parameters
 params = struct( ...
-    'ctrlMax_dim', 1e-7, ...
-    'md_lim_dim',  0.5, ...
-    'pocLim', 1e-6, ... 
-    'nx_orb', 30, ...
-    'n_orb', 1, ...
+    'mass',             800, ... % kg (Starlink v2)
+    'thrust',           300, ... % mN (Starlink v2)
+    'md_lim_dim',       2, ...   % km
+    'pocLim',           1e-6, ... 
+    'nx_orb',           60, ...  % Number of nodes per orbit
+    'n_orb',            1, ...   % Number of orbits before TCA
     'breakOnThreshold', 1, ...
-    'metric_case', 1 ...
+    'metric_case',      2 ...    % 1: miss distance, 2: SMD
     );
+params.ctrlMax_dim = params.thrust/1e6/params.mass; % km/s^2
 
 % Scenario definition
 [primary,secondary] = generateInitShort(1);
@@ -27,9 +29,9 @@ input = write_input(scenario, params);
 !wsl ./build/bin/backSweep
 
 %%
-outSim = readBackSweepOutput('output.json',params.metric_case);
+outSim = readBackSweepOutput('output.json',input,scenario,params.metric_case);
 
 %% Validation and postprocessing
-validation = validateBackSweep('output.json');
+validation = validateBackSweep('output.json',scenario);
 
 mainPostprocess(outSim, validation, scenario, input, params)

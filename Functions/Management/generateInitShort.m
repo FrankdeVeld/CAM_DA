@@ -1,6 +1,6 @@
 function [primary,secondary] = generateInitShort(ind)
 mu     = 398600.4418;    % [m^3/s^2]
-load("conjunctions_leo.mat");
+load("data/conjunctions_leo.mat");
 % load("train.mat");
 B = table2array(data); clear data;
 

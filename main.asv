@@ -7,14 +7,16 @@ addpath(genpath('.\Functions'))
 
 %Parameters
 params = struct( ...
-    'ctrlMax_dim', 1e-8, ...
-    'md_lim_dim',  1, ...
-    'pocLim', 1e-6, ... 
-    'nx_orb', 30, ...
-    'n_orb', 1, ...
+    'mass',         800, ... % kg (Starlink v2)
+    'thrust',       300, ... % mN (Starlink v2)
+    'md_lim_dim',   0.5, ...
+    'pocLim',           1e-6, ... 
+    'nx_orb',           60, ...
+    'n_orb',        1, ...
     'breakOnThreshold', 1, ...
-    'metric_case', 2 ...
+    'metric_case', 1 ...
     );
+params.ctrlMax_dim = params.thrust/1e6/params.mass; % km/s^2
 
 % Scenario definition
 [primary,secondary] = generateInitShort(1);
@@ -26,39 +28,10 @@ input = write_input(scenario, params);
 %% Optimisation
 !wsl ./build/bin/backSweep
 
-[control, rB, tca_shift, md, smd] = readBackSweepOutput('output.json');
+%%
+outSim = readBackSweepOutput('output.json',params.metric_case);
 
 %% Validation and postprocessing
-[rB_val, md_val, smd_val, poc] = validateBackSweep('output.json');
-rB_val(rB_val==0) = nan;
-rB(rB==0)         = nan;
-% figure
-% plot(tca_shift*Tsc)
-% hold on
-% plot(dtca*Tsc)
-% hold off
+validation = validateBackSweep('output.json',scenario);
 
-figure
-plot(control)
-legend('R','T','N')
-
-figure
-plot(sqrt(md)*input.Lsc)
-hold on
-plot(md_val*input.Lsc)
-plot(scenario.md_lim_d *ones(2,1),[0,N],'k--')
-hold off
-
-figure
-semilogy(poc)
-ylim([1e-10,1e-2])
-
-
-figure
-plot(smd)
-hold on
-plot(smd_val)
-plot(scenario.smdLim*ones(2,1),[0,N],'k--')
-hold off
-
-showEllipseBplane(scenario.Pb,input.lim,rB,rB_val,input.metric_case,input.Lsc);
+mainPostprocess(outSim, validation, scenario, input, params)

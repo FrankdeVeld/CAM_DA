@@ -1,4 +1,4 @@
-function output = validateBackSweep(jsonFile)
+function output = validateBackSweep(jsonFile,scenario)
 % VALIDATEBACKSWEEP  Validates the backward-sweep CAM optimisation output.
 %
 %   Reads the JSON produced by DAGreedyBackSweepJson, back-propagates the
@@ -11,10 +11,6 @@ function output = validateBackSweep(jsonFile)
 %     validateBackSweep()                 % uses 'output.json' in current folder
 %     validateBackSweep('path/out.json')
 %
-%   DEPENDENCIES (your existing helpers)
-%     propKepOde, eci2Bplane, Bplane
-%
-%   Author:  auto-generated validation script
 
 if nargin < 1, jsonFile = 'output.json'; end
 
@@ -65,10 +61,12 @@ xp0 = xp_backprop(:, end);   % 6x1 at t_alert
 %  Secondary propagates freely.
 
 N_ref = 50;
+dt1   = 0.02/scenario.Tsc;
+ddt   = dt1/N_ref;
 
 xp_hist     = nan(6, N);   % primary state history
-xp_ref      = nan(6, N_ref*2); 
-xs_ref      = nan(6, N_ref*2); 
+xp_ref      = nan(6, N_ref); 
+xs_ref      = nan(6, N_ref); 
 xp_hist_nom = nan(6, N);   
 rB_hist     = nan(N,2);   
 smd_hist    = nan(N,1);
@@ -77,42 +75,53 @@ deltaTca    = nan(N,1);
 
 xp_hist_nom(:,1) = xp0;
 
-% secondary refined near tca
-ddt = dt/N_ref;
-xs_ref(:,1) = propKepOde(xs_tca, zeros(3,1), -dt, mu);
-for i = 1:2*N_ref
-    xs_ref(:,i+1) = propKepOde(xs_ref(:,i), zeros(3,1), ddt, mu);
-end
+% % secondary refined near tca
+% xs_ref(:,1) = propKepOde(xs_tca, zeros(3,1), -dt1, mu);
+% for i = 1:N_ref-1
+%     xs_ref(:,i+1) = propKepOde(xs_ref(:,i), zeros(3,1), ddt, mu);
+% end
 
+% Nominal primary trajectory
 for k = 1:N-1
     xp_hist_nom(:,k+1) = propKepOde(xp_hist_nom(:,k), zeros(3,1), dt, mu);
 end
 
-for j = 1:N-1
+% Quantities at TCA without control
+deltaTca(end) = 0;
+[Pb, rB_hist(end,:), smd_hist(end)] = Bplane(xp_tca, xs_tca, P);   
+poc_hist(end)  = poc_Chan(HBR,Pb,smd_hist(end));
+
+% Backward sweep
+for j = N-1:-1:1
+    if norm(u_control(j,:)) == 0
+        deltaTca(j) = deltaTca(j+1);
+        rB_hist(j,:) = rB_hist(j+1,:);
+        smd_hist(j)  = smd_hist(j+1);
+        poc_hist(j)  = poc_hist(j+1);
+        continue
+    end
     xp_hist(:,j) = xp_hist_nom(:,j);
     for k = j:N-1
         u_k     = u_control(k,:)'*uMax;
         xp_hist(:,k+1) = propKepOde(xp_hist(:,k), u_k, dt, mu);
     end
-   
-    % %find new TCA
-    % xp_ref(:,1) = xp_hist(:,end-1);
-    % for i = 1:2*N_ref
-    %     xp_ref(:,i+1) = propKepOde(xp_ref(:,i), u_k, ddt, mu);
-    % end
-    % md_ref  = normOfVec(xp_ref - xs_ref);
-    % [~,ind] = min(md_ref);
-    % 
-    % deltaTca(j) = dt - ddt*ind; 
-    [Pb, rB_hist(j,:), smd_hist(j)] = Bplane(xp_hist(:,end), xs_tca, P);   
-    poc_hist(j) = poc_Chan(HBR,Pb,smd_hist(j));
 
+    % find new TCA
+    % xp_ref(:,1) = propKepOde(xp_hist(:,N-1), u_k, dt-dt1, mu);
+    % for i = 1:N_ref-1
+    %     x_rel_ref(:,i) = xp_ref(:,i) - xs_ref(:,i);
+    %     ca_ref(i)      = norm(x_rel_ref(1:3,i)');
+    %     % if i > 1 && ca_ref(i) > ca_ref(i-1); break; end
+    %     xp_ref(:,i+1)  = propKepOde(xp_ref(:,i), u_k, ddt, mu);
+    % end
+    % [~,ind] = min(ca_ref);
+
+    % deltaTca(j) =  ddt * (ind - (N_ref + 1)); 
+    [Pb, rB_hist(j,:), smd_hist(j)] = Bplane(xp_hist(:,end), xs_tca, P);   
+    % [Pb, rB_hist(j,:), smd_hist(j)] = Bplane(xp_ref(:,ind), xs_ref(:,ind), P);   
+    poc_hist(j) = poc_Chan(HBR,Pb,smd_hist(j));
 end
 miss_dist  = normOfVec(rB_hist')';   
-[Pb, rB_hist(end,:), smd_hist(end)] = Bplane(xp_tca, xs_tca, P);   
-poc_hist(end)  = poc_Chan(HBR,Pb,smd_hist(end));
-miss_dist(end) = norm(rB_hist(end,:));
-deltaTca(end)  = 0;
 
 output = struct( ...
     'rB',       rB_hist, ...
