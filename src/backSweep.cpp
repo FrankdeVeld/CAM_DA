@@ -114,9 +114,10 @@ int main( void )
     }
     DA da_null = DA(1)*0.0;
     DA alpha = DA(10);
+    double t_n;
     ////////////////////////////////////////////////////////////// START OF ITERATIVE LOOP /////////////////////////////////////////////////////
     for(int n = N-1; n > 0; n--) {
-        double t_n = dt*(N-n);
+        t_n = dt*(N-n);
         xp_tn_Vec = KeplerProp(xp_tf, - (t_n), 1.0);
 
         for (i=0; i<3; i++){
@@ -169,7 +170,7 @@ int main( void )
     for (int n = 0; n < N; ++n) {
         json jn;
         jn["i"] = n;
-        jn["tNode"] = t_back*static_cast<double>(n);   // re-dimensionalise
+        jn["tNode"] = t_n;
 
         jn["controlRTN"] = {
             u_save.at(n,0),

@@ -2,16 +2,6 @@ function [] = mainPostprocess(outSim, validation, scenario, input, params)
 
 t = flip(scenario.t);
 
-figure
-plot(outSim.deltaTca*scenario.Tsc)
-hold on
-plot(validation.deltaTca*scenario.Tsc)
-hold off
-grid on
-xlabel('Orbits before TCA')
-ylabel('TCA shift [s]')
-legend('Optimization','Validation')
-
 showEllipseBplane(scenario.Pb,input.lim,outSim.rB,validation.rB, ...
                     input.metric_case,input.Lsc);
 
@@ -21,6 +11,12 @@ legend('R','T','N')
 grid on
 xlabel('Orbits before TCA')
 ylabel('Normalized control')
+
+figure
+plot(t,outSim.deltaTca*scenario.Tsc)
+grid on
+xlabel('Orbits before TCA')
+ylabel('TCA shift [s]')
 
 figure
 plot(t,sqrt(outSim.m_d)*input.Lsc)
@@ -72,5 +68,6 @@ if params.metric_case == 2
 end
 dvTot = normOfVec(outSim.control(1:end-1,:)')*diff(-t)'*scenario.T*scenario.Vsc*scenario.ctrlMax*1000; % m/s
 disp(['Total Delta v = ', num2str(dvTot), ' m/s'])
+disp(['Maneuver starts ' num2str(outSim.t_start*scenario.Tsc), ' s before TCA'])
 end
 
