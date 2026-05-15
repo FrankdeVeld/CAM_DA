@@ -729,11 +729,10 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
         ConvRadiusEval[i+6] = DA(7+i);                                             // The optimal thrust in first-order approximation
     }
 
-    // Now substitute the DA objects in the Distance Metric, evaluated at tca (if n!=N-1)
+    AlgebraicVector<DA> DeltaRB_loc(2);
     if(n==N-1){ 
-        AlgebraicVector<DA> DeltaRB(2);
         AlgebraicMatrix<DA> Pb(2,2);
-        DeltaRB = props::bplane_distance(xp_tnp1_DA, xs_tnp1_DA);
+        DeltaRB_loc = props::bplane_distance(xp_tnp1_DA, xs_tnp1_DA);
 
         if (DM_Case == 2) {
         // Project covariance onto b-plane
@@ -751,82 +750,51 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
             }
         Pb = similarity(e2b, P);
         }
-
-        DM          = Distance_Metric(DM_Case,DeltaRB,Pb,R);
-
-        ConvRadius = DM.eval(ConvRadiusEval).convRadius(1e-8,2);
-        //cout << "ConvRadius: " << ConvRadius << endl;
-        // The distance metric is now a Taylor polynomial of dr(tn), dv(tn) and du(tn) 
-
-        // In first-order approximation, the control can be derived from the partial derivative of the DA object DM
-        for (i=0; i<3; i++){
-            u_OptFO_tn[i] = cons(DM.deriv(7+i));                                                     // The control is defined in the RTN reference frame
-        }
-        u_OptFO_tn = u_OptFO_tn/u_OptFO_tn.vnorm();                                                      // Normalise the control; we set the magnitude independently
-
-        for (i=0; i<6; i++){
-            Evaluated_Control[i] = 0.0;                                                                         // The thrust u(tn) has no influence on dr(tn) and dv(tn); for evaluation, these are set to 0
-        }
-        for (i=0; i<3; i++){
-            Evaluated_Control[i+6] = ThrustMagnitude*u_OptFO_tn[i];                                             // The optimal thrust in first-order approximation
-        }
-        
-        DM_Evaluated_Control                    = DM.eval(Evaluated_Control);
-        tCA_Evaluated_Control                   = tCA.eval(Evaluated_Control);
-        DeltaRB_Evaluated_Control               = DeltaRB.eval(Evaluated_Control);
-        xp_tnp1_Evaluated_Control               = xp_tnp1_DA.eval(Evaluated_Control);
-        
-        // For next iteration: First 6 are dx(tn): free DA variables to be substituted next iteration, last 3 are filled in control u(tn)
-        for (i=0; i<3; i++){
-            Evaluated_NextIt[i]   = DA(i+1);
-            Evaluated_NextIt[i+3] = DA(i+4);
-            Evaluated_NextIt[i+6] = ThrustMagnitude*u_OptFO_tn[i]; // 
-        }
-
-        DM_NextIt                  = DM.eval(Evaluated_NextIt);
-        tCA_NextIt                 = tCA.eval(Evaluated_NextIt);
-        DeltaRB_NextIt             = DeltaRB.eval(Evaluated_NextIt);
+        DM          = Distance_Metric(DM_Case,DeltaRB_loc,Pb,R);
     } else { // Later iterations
         for(i=0; i<3; i++){
             Evaluated_CurrentIt[i]   = xp_tnp1_DA[i]   - cons(xp_tnp1_DA[i]);
             Evaluated_CurrentIt[i+3] = xp_tnp1_DA[i+3] - cons(xp_tnp1_DA[i+3]);
             Evaluated_CurrentIt[i+6] = 0*DA(i+7);
         }
-
-
         DM                            = DM.eval(Evaluated_CurrentIt);                                   // Evaluation of EucDis from previous iteration with dependencies of current iteration
         tCA                           = tCA.eval(Evaluated_CurrentIt);                                   // Evaluation of EucDis from previous iteration with dependencies of current iteration
         DeltaRB                       = DeltaRB.eval(Evaluated_CurrentIt);                                   // Evaluation of EucDis from previous iteration with dependencies of current iteration
-        
-        ConvRadius = DM.eval(ConvRadiusEval).convRadius(1e-8,2);
-        //cout << "ConvRadius: " << ConvRadius << endl;
-        // In first-order approximation, the control can be derived from the partial derivative of the DA object EucDis
-        for (i=0; i<3; i++){
-            u_OptFO_tn[i] = cons(DM.deriv(7+i));                                           // The control is defined in the RTN reference frame
-        }
-        u_OptFO_tn = u_OptFO_tn/u_OptFO_tn.vnorm();                                                      // Normalise the control; we set the magnitude independently
+    }
+    
+    ConvRadius = DM.eval(ConvRadiusEval).convRadius(1e-8,2);
+    //cout << "ConvRadius: " << ConvRadius << endl;
+    // In first-order approximation, the control can be derived from the partial derivative of the DA object EucDis
+    for (i=0; i<3; i++){
+        u_OptFO_tn[i] = cons(DM.deriv(7+i));                                           // The control is defined in the RTN reference frame
+    }
+    u_OptFO_tn = u_OptFO_tn/u_OptFO_tn.vnorm();                                                      // Normalise the control; we set the magnitude independently
 
-        for (i=0; i<6; i++){
-            Evaluated_Control[i] = 0.0;                                                                         // The thrust u(tn) has no influence on dr(tn) and dv(tn); for evaluation, these are set to 0
-        }
-        for (i=0; i<3; i++){
-            Evaluated_Control[i+6] = ThrustMagnitude*u_OptFO_tn[i];                                             // The optimal thrust in first-order approximation
-        }
+    for (i=0; i<6; i++){
+        Evaluated_Control[i] = 0.0;                                                                         // The thrust u(tn) has no influence on dr(tn) and dv(tn); for evaluation, these are set to 0
+    }
+    for (i=0; i<3; i++){
+        Evaluated_Control[i+6] = ThrustMagnitude*u_OptFO_tn[i];                                             // The optimal thrust in first-order approximation
+    }
 
-        DM_Evaluated_Control                    = DM.eval(Evaluated_Control);
-        tCA_Evaluated_Control                   = tCA.eval(Evaluated_Control);
-        DeltaRB_Evaluated_Control               = DeltaRB.eval(Evaluated_Control);
-        xp_tnp1_Evaluated_Control               = xp_tnp1_DA.eval(Evaluated_Control);
+    DM_Evaluated_Control                    = DM.eval(Evaluated_Control);
+    tCA_Evaluated_Control                   = tCA.eval(Evaluated_Control);
+    DeltaRB_Evaluated_Control               = DeltaRB.eval(Evaluated_Control);
+    xp_tnp1_Evaluated_Control               = xp_tnp1_DA.eval(Evaluated_Control);
 
-        // For next iteration: First 6 are dx(tn): free DA variables to be substituted next iteration, last 3 are filled in control u(tn)
-        for (i=0; i<3; i++){
-            Evaluated_NextIt[i]   = DA(i+1);
-            Evaluated_NextIt[i+3] = DA(i+4);
-            Evaluated_NextIt[i+6] = ThrustMagnitude*u_OptFO_tn[i]; //
-        }
+    // For next iteration: First 6 are dx(tn): free DA variables to be substituted next iteration, last 3 are filled in control u(tn)
+    for (i=0; i<3; i++){
+        Evaluated_NextIt[i]   = DA(i+1);
+        Evaluated_NextIt[i+3] = DA(i+4);
+        Evaluated_NextIt[i+6] = ThrustMagnitude*u_OptFO_tn[i]; //
+    }
 
-        DM_NextIt                  = DM.eval(Evaluated_NextIt);
-        tCA_NextIt                 = tCA.eval(Evaluated_NextIt);
+    DM_NextIt                  = DM.eval(Evaluated_NextIt);
+    tCA_NextIt                 = tCA.eval(Evaluated_NextIt);
+    if(n==N-1){
+        DeltaRB_NextIt             = DeltaRB_loc.eval(Evaluated_NextIt);
+    }
+    else{    
         DeltaRB_NextIt             = DeltaRB.eval(Evaluated_NextIt);
     }
     return std::make_tuple(xp_tnp1_Evaluated_Control, u_OptFO_tn, DeltaRB_Evaluated_Control, DM_Evaluated_Control, tCA_Evaluated_Control, DM_NextIt, tCA_NextIt, DeltaRB_NextIt);
