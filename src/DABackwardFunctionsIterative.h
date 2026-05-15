@@ -710,13 +710,13 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
 
     double DM_Evaluated_Control;
     double tCA_Evaluated_Control;
-    AlgebraicVector<double> DeltaRB_Evaluated_Control(3);
+    AlgebraicVector<double> DeltaRB_Evaluated_Control(2);
     AlgebraicVector<double> xp_tnp1_Evaluated_Control(6);
 
     DA DM_NextIt;
     DA tCA_NextIt;
     double ConvRadius;
-    AlgebraicVector<DA> DeltaRB_NextIt(3);
+    AlgebraicVector<DA> DeltaRB_NextIt(2);
     AlgebraicVector<DA> ConvRadiusEval(9);
 
     AlgebraicVector<double> u_OptFO_tn(3);

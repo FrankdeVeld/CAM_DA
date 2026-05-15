@@ -36,7 +36,7 @@ P = P_in;
 %% ── 2. Extract control and timing from JSON ───────────────────────────────
 t_nodes    = zeros(N,1);
 u_control  = zeros(N,3);   % RTN, already scaled (u_dir * uMax from JSON)
-rB_opt     = zeros(N,3);
+rB_opt     = zeros(N,2);
 
 for k = 1:N
     nd = nodes(k);

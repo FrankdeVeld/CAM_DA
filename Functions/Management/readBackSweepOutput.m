@@ -29,7 +29,7 @@ nodes = raw.nodes;
 N = numel(nodes);
 
 control         = nan(N, 3);
-rB              = nan(N, 3);
+rB              = nan(N, 2);
 tca_shift       = nan(N, 1);
 m_d             = nan(N, 1);
 smd             = nan(N, 1);

@@ -159,6 +159,7 @@ int main( void )
 
         DM_save[n-1]  = DM_Evaluated_Control;
         tCA_save[n-1] = tCA_Evaluated_Control;
+        if (breakOnThreshold == 1 && DM_save[n-1] >= lim) {break;}
     }
 
     //////////////////////////////////////////////////////////////// WRITE JSON OUTPUT ////////////////////////////////////////////////////////////////////////////
