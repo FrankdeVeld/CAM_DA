@@ -14,7 +14,7 @@ params = struct( ...
     'nx_orb',           60, ...  % Number of nodes per orbit
     'n_orb',            1, ...   % Number of orbits before TCA
     'breakOnThreshold', 1, ...
-    'metric_case',      1 ...    % 1: miss distance, 2: SMD
+    'metric_case',      2 ...    % 1: miss distance, 2: SMD
     );
 params.ctrlMax_dim = params.thrust/1e6/params.mass; % km/s^2
 

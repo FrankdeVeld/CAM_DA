@@ -58,7 +58,7 @@ template <typename T> T atan2_mod(T a, T b) {
 
 template<typename T, typename U>
 DACE::AlgebraicVector<T> RK78(const int N, DACE::AlgebraicVector<T> Y0, DACE::AlgebraicVector<T> U0,
-	const U X0, const U X1, AlgebraicVector<T> (*dyn)(AlgebraicVector<T>,AlgebraicVector<T>,double,double,double), const double mu, const double Lsc,  
+	const U X0, const U X1, AlgebraicVector<T> (*dyn)(AlgebraicVector<T>,AlgebraicVector<T>,U,double,double), const double mu, const double Lsc,  
     const bool returnIntermediatePoints = false, const double tolerance = 1.e-11){
 
     double ERREST;
@@ -427,7 +427,7 @@ template<typename T, typename U> T ConstPoC(AlgebraicVector<T> r, AlgebraicMatri
     return PoC;
 }
 
-template<typename T> AlgebraicVector<T> TBAcc( AlgebraicVector<T> x, AlgebraicVector<T> uRTN, double t, double mu, double Lsc )
+template<typename T, typename U> AlgebraicVector<T> TBAcc( AlgebraicVector<T> x, AlgebraicVector<T> uRTN, U t, double mu, double Lsc )
 {
     
     AlgebraicVector<T> pos(3), res(6);
@@ -494,61 +494,6 @@ double Initialtca(int Scenario,double MuEarth) {
             }
     }
     return tca;
-}
-
-AlgebraicVector<double> InitialXs(int Scenario,double MuEarth, double Lsc) {
-    AlgebraicVector<double> xs_t0(6);
-    AlgebraicVector<double> xs_tf(6);
-    switch(Scenario) {
-        case 1:
-            {
-            // Set initial conditions
-            const double eccs = 0.1;
-
-            const double sec  = 8000;               
-            // Secondary final position
-            xs_tf[0] = sec; // sec km altitude
-            xs_tf[1] = 0.0;
-            xs_tf[2] = 0.0;
-            xs_tf[3] = 0.0;
-            xs_tf[4] = -sqrt(MuEarth/abs(sec))*sqrt(1-eccs);  // at apogee
-            xs_tf[5] = 0.0;
-            double tCA_Nom  = Initialtca(Scenario, MuEarth);                           // Obtain initial tCA
-
-            // Secondary initial position, guaranteeing a collision at tca 
-            xs_t0 = RK78(6, xs_tf, {0.0, 0.0, 0.0}, 0.0, -tCA_Nom,TBAcc,MuEarth,Lsc);     
-            // Nominal miss distance: 500 m
-            break;
-            }
-    }
-    return xs_t0;
-}
-
-AlgebraicVector<double> InitialXp(int Scenario,double MuEarth, double Lsc) {
-    AlgebraicVector<double> xp_t0(6);
-    AlgebraicVector<double> xp_tf(6);
-    switch(Scenario) {
-        case 1:
-            {
-            // Set initial conditions
-            const double eccp = 0.1;
-
-            const double prim  = 8000.5;               
-            // Secondary final position
-            xp_tf[0] = prim; // sec km altitude
-            xp_tf[1] = 0.0;
-            xp_tf[2] = 0.0;
-            xp_tf[3] = 0.0;
-            xp_tf[4] = 0.0;  // at apogee
-            xp_tf[5] = -sqrt(MuEarth/abs(prim))*sqrt(1-eccp);
-            double tCA_Nom  = Initialtca(Scenario, MuEarth);                           // Obtain initial tCA
-
-            // Secondary initial position, guaranteeing a collision at tca 
-            xp_t0 = RK78(6, xp_tf, {0.0, 0.0, 0.0}, 0.0, -tCA_Nom,TBAcc,MuEarth,Lsc);     
-            // Nominal miss distance: 500 m  
-            }                  
-    }
-    return xp_t0;
 }
 
 tuple<DA, AlgebraicVector<DA>, AlgebraicVector<DA>> tcaInversion(int tCAHandling, AlgebraicVector<double> u_Nom, AlgebraicVector<DA> u_tn, AlgebraicVector<DA> xp_tnp1_DA,AlgebraicVector<double> xs_tnp1_Vec, DA tCA_tn, double MuEarth, double Lsc){ 
@@ -705,8 +650,8 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
     int i;
     int j;
     AlgebraicVector<double> Evaluated_Control(9);
-    AlgebraicVector<DA> Evaluated_NextIt(9);
-    AlgebraicVector<DA> Evaluated_CurrentIt(9);
+    AlgebraicVector<DA>     Evaluated_NextIt(9);
+    AlgebraicVector<DA>     Evaluated_CurrentIt(9);
 
     double DM_Evaluated_Control;
     double tCA_Evaluated_Control;
@@ -718,6 +663,7 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
     double ConvRadius;
     AlgebraicVector<DA> DeltaRB_NextIt(2);
     AlgebraicVector<DA> ConvRadiusEval(9);
+    AlgebraicVector<DA> DeltaRB_loc(2);
 
     AlgebraicVector<double> u_OptFO_tn(3);
     
@@ -729,7 +675,6 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
         ConvRadiusEval[i+6] = DA(7+i);                                             // The optimal thrust in first-order approximation
     }
 
-    AlgebraicVector<DA> DeltaRB_loc(2);
     if(n==N-1){ 
         AlgebraicMatrix<DA> Pb(2,2);
         DeltaRB_loc = props::bplane_distance(xp_tnp1_DA, xs_tnp1_DA);
@@ -779,7 +724,6 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
 
     DM_Evaluated_Control                    = DM.eval(Evaluated_Control);
     tCA_Evaluated_Control                   = tCA.eval(Evaluated_Control);
-    DeltaRB_Evaluated_Control               = DeltaRB.eval(Evaluated_Control);
     xp_tnp1_Evaluated_Control               = xp_tnp1_DA.eval(Evaluated_Control);
 
     // For next iteration: First 6 are dx(tn): free DA variables to be substituted next iteration, last 3 are filled in control u(tn)
@@ -793,9 +737,11 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
     tCA_NextIt                 = tCA.eval(Evaluated_NextIt);
     if(n==N-1){
         DeltaRB_NextIt             = DeltaRB_loc.eval(Evaluated_NextIt);
+        DeltaRB_Evaluated_Control  = DeltaRB_loc.eval(Evaluated_Control);
     }
     else{    
         DeltaRB_NextIt             = DeltaRB.eval(Evaluated_NextIt);
+        DeltaRB_Evaluated_Control  = DeltaRB.eval(Evaluated_Control);
     }
     return std::make_tuple(xp_tnp1_Evaluated_Control, u_OptFO_tn, DeltaRB_Evaluated_Control, DM_Evaluated_Control, tCA_Evaluated_Control, DM_NextIt, tCA_NextIt, DeltaRB_NextIt);
 }

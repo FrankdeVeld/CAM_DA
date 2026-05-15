@@ -88,7 +88,6 @@ int main( void )
     AlgebraicVector<double> xp_tn_Vec(6), xs_tn_Vec(6);
     AlgebraicVector<DA>     u_tn(3), xp_tn_DA(6), rp_tn_DA(3), vp_tn_DA(3);
     AlgebraicVector<DA>     xp_tnp1_DA(6);
-    AlgebraicVector<double> xs_tnp1_Vec(6);
     AlgebraicVector<DA>     xs_tCA_DA(6), xp_tCA_DA(6);
     AlgebraicVector<DA>     Evaluated_tCA(10);
 
@@ -113,11 +112,12 @@ int main( void )
     else {
         DM_save[N-1] = smd0;
     }
-
+    DA da_null = DA(1)*0.0;
+    DA alpha = DA(10);
     ////////////////////////////////////////////////////////////// START OF ITERATIVE LOOP /////////////////////////////////////////////////////
     for(int n = N-1; n > 0; n--) {
         double t_n = dt*(N-n);
-        xp_tn_Vec = RK78(6, xp_tf, u_Nom, 0.0, -t_n, TBAcc, 1.0, Lsc);
+        xp_tn_Vec = KeplerProp(xp_tf, - (t_n), 1.0);
 
         for (i=0; i<3; i++){
             rp_tn_DA[i] = xp_tn_Vec[i]   + DA(i+1);
@@ -132,10 +132,8 @@ int main( void )
         xp_tnp1_DA  = RK78(6, xp_tn_DA, {u_Nom[0]+u_tn[0], u_Nom[1]+u_tn[1], u_Nom[2]+u_tn[2]}, 0.0, dt, TBAcc, 1.0, Lsc);
 
         if (n == N-1){
-            xs_tn_Vec   = RK78(6, xs_tf, u_Nom, 0.0, -t_n, TBAcc, 1.0, Lsc);
-            xs_tnp1_Vec = RK78(6, xs_tn_Vec, {0.0, 0.0, 0.0}, 0.0, dt, TBAcc, 1.0, Lsc);
             tCA_tn      = DA(10);
-            tie(tCA_tn, xp_tCA_DA, xs_tCA_DA) = tcaInversion(tCAHandling, u_Nom, u_tn, xp_tnp1_DA, xs_tnp1_Vec, tCA_tn, 1.0, Lsc);
+            tie(tCA_tn, xp_tCA_DA, xs_tCA_DA) = tcaInversion(tCAHandling, u_Nom, u_tn, xp_tnp1_DA, xs_tf, tCA_tn, 1.0, Lsc);
             for (i=0;i<6;i++) Evaluated_tCA[i] = DA(i+1);
             for (i=0;i<3;i++) Evaluated_tCA[i+6] = DA(i+7);
             Evaluated_tCA[9] = tCA_tn;
