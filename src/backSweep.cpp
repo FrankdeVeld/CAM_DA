@@ -93,7 +93,7 @@ int main( void )
     AlgebraicVector<DA>     Evaluated_tCA(10);
 
     // Save matrices (same as original, kept for intermediate use)
-    AlgebraicMatrix<double> u_save(N,3), DeltaRB_save(N,3);
+    AlgebraicMatrix<double> u_save(N,3), DeltaRB_save(N,2);
     AlgebraicVector<double> DM_save(N), tCA_save(N);
 
     DA DM_NextIt, tCA_NextIt;
@@ -153,11 +153,12 @@ int main( void )
 
         for(i=0;i<3;i++){
             u_save.at(n-1,i)       = u_OptFO_tn[i];
-            DeltaRB_save.at(n-1,i) = DeltaRB_Evaluated_Control[i];
         }
+        DeltaRB_save.at(n-1,0) = DeltaRB_Evaluated_Control[0];
+        DeltaRB_save.at(n-1,1) = DeltaRB_Evaluated_Control[1];
+
         DM_save[n-1]  = DM_Evaluated_Control;
         tCA_save[n-1] = tCA_Evaluated_Control;
-        if (breakOnThreshold == 1 && DM_save[n-1] >= lim) {break;}
     }
 
     //////////////////////////////////////////////////////////////// WRITE JSON OUTPUT ////////////////////////////////////////////////////////////////////////////
@@ -182,7 +183,6 @@ int main( void )
         jn["relativePositionBPlane"] = {
             DeltaRB_save.at(n,0),
             DeltaRB_save.at(n,1),
-            DeltaRB_save.at(n,2)
         };
 
         jn["dangerMetric"] = DM_save[n];
