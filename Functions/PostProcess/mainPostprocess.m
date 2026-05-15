@@ -1,6 +1,6 @@
 function [] = mainPostprocess(outSim, validation, scenario, input, params)
 
-t = scenario.t;
+t = flip(scenario.t);
 
 figure
 plot(outSim.deltaTca*scenario.Tsc)
@@ -70,7 +70,7 @@ if params.metric_case == 2
     xlabel('Orbits before TCA')
     ylabel('PoC relative error [%]')
 end
-dvTot = normOfVec(outSim.control(1:end-1,:)')*diff(t)'*scenario.T*scenario.Vsc*scenario.ctrlMax*1000; % m/s
+dvTot = normOfVec(outSim.control(1:end-1,:)')*diff(-t)'*scenario.T*scenario.Vsc*scenario.ctrlMax*1000; % m/s
 disp(['Total Delta v = ', num2str(dvTot), ' m/s'])
 end
 

@@ -11,7 +11,7 @@ plot(traj(:,1)*Lsc,traj(:,2)*Lsc,'k')
 hold on
 plot(traj(end,1)*Lsc,traj(end,2)*Lsc,'ko')
 plot(0,0,'k*')
-plot(trajVal(:,1)*Lsc,trajVal(:,2)*Lsc,'r')
+plot(trajVal(:,1)*Lsc,trajVal(:,2)*Lsc,'r.')
 t          = 0:0.001:2*pi;
 if metric == 1
     plot(sqrt(lim)*Lsc*sin(t),sqrt(lim)*Lsc*cos(t),'k','HandleVisibility','off')
