@@ -1,8 +1,18 @@
 clear
-% close all
+close all
 clc
 addpath(genpath('.\Functions'))
+set(0,'DefaultTextInterpreter','latex');
+set(0,'DefaultAxesFontSize',16);
+set(0,'DefaultAxesFontName','Times');
+set(0,'DefaultUicontrolFontName','Times', 'DefaultUicontrolFontSize', 16);
+set(0,'DefaultUitableFontName','Times', 'DefaultUitableFontSize', 16);
+set(0,'DefaultTextFontName','Times', 'DefaultTextFontSize', 16);
+set(0,'DefaultUipanelFontName','Times', 'DefaultUipanelFontSize', 16);
 
+set(0, 'DefaultLineLineWidth', 1);
+set(0,'defaultfigurecolor',[1 1 1])
+    
 %% Initialisation
 
 %Parameters
@@ -13,8 +23,9 @@ params = struct( ...
     'pocLim',           1e-6, ... 
     'nx_orb',           360, ...  % Number of nodes per orbit
     'n_orb',            0.2, ...   % Number of orbits before TCA
-    'breakOnThreshold', 1, ...
-    'metric_case',      2 ...    % 1: miss distance, 2: SMD
+    'metric_case',      2, ...    % 1: miss distance, 2: SMD
+    'order',            6, ...    % 1: DA order
+    'tCAHandling',      2 ...     % 1: Fix, 2: changing
     );
 params.ctrlMax_dim = params.thrust/1e6/params.mass; % km/s^2
 
@@ -32,6 +43,6 @@ input = write_input(scenario, params);
 outSim = readBackSweepOutput('output.json',input,scenario,params.metric_case);
 
 %% Validation and postprocessing
-validation = validateBackSweep('output.json',scenario);
+validation = validateBackSweep(input,outSim);
 
 mainPostprocess(outSim, validation, scenario, input, params)
