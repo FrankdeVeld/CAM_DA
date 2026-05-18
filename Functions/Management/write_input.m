@@ -5,6 +5,7 @@ function input = write_input(scenario, params)
     input.Lsc     = scenario.Lsc; 
     input.et      = 659871.07119168108; 
     input.t_back  = params.n_orb*2*pi; 
+    input.t_start = params.n_orb_start*2*pi; 
     input.uMax    = scenario.ctrlMax;
     input.xp_tCA  = scenario.x_p';
     input.xs_tCA  = scenario.x_s';
