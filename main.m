@@ -22,9 +22,10 @@ params = struct( ...
     'md_lim_dim',       2, ...   % km
     'pocLim',           1e-6, ... 
     'nx_orb',           360, ...  % Number of nodes per orbit
-    'n_orb',            0.2, ...   % Number of orbits before TCA
+    'n_orb',            0.7, ...   % Number of orbits before TCA
+    'n_orb_start',      0.5, ...   % Number of orbits before TCA
     'metric_case',      2, ...    % 1: miss distance, 2: SMD
-    'order',            6, ...    % 1: DA order
+    'order',            2, ...    % 1: DA order
     'tCAHandling',      2 ...     % 1: Fix, 2: changing
     );
 params.ctrlMax_dim = params.thrust/1e6/params.mass; % km/s^2
