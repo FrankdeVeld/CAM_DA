@@ -169,7 +169,7 @@ DACE::AlgebraicVector<T> RK78(const int N, DACE::AlgebraicVector<T> Y0, DACE::Al
     }
 
     double sig=1.;
-    if(X1<X0){
+    if(cons(X1)<cons(X0)){
 	sig=-1.;
     }
     H=sig*abs(HS);
@@ -414,19 +414,6 @@ template<typename T> T det2(AlgebraicMatrix<T> M)
     return det;
 }
 
-template<typename T, typename U> T ConstPoC(AlgebraicVector<T> r, AlgebraicMatrix<U> P, double R){
-  
-    // Constant PoC on B-plane
-    AlgebraicMatrix<U> P_inv(2,2);
-    U det = det2(P);
-    P_inv = P.inv();
-    
-    T smd = r.dot(P_inv*r);
-    T PoC = R*R/(2*sqrt(det))*exp(-smd/2);
-    
-    return PoC;
-}
-
 template<typename T, typename U> AlgebraicVector<T> TBAcc( AlgebraicVector<T> x, AlgebraicVector<T> uRTN, U t, double mu, double Lsc )
 {
     
@@ -530,96 +517,6 @@ tuple<DA, AlgebraicVector<DA>, AlgebraicVector<DA>> tcaInversion(int tCAHandling
 }
 
 
-double FilePrint(string SaveName, int N, AlgebraicMatrix<double> xp_save, AlgebraicMatrix<double> xs_save, AlgebraicMatrix<double> u_save, AlgebraicMatrix<double> xpadj_save, AlgebraicMatrix<double> DeltaRB_save, AlgebraicVector<double> DM_save, AlgebraicVector<double> tCA_save)
-{
-    int i;
-    int j;
-    ofstream xp, xs, u, xpadj, DM, tCA, deltar;
-    string xpFileName = "./write_read/xp_" + SaveName + ".dat";
-    xp.open(xpFileName);
-    xp << setprecision(16);
-    for (i=0; i<N+1; i++)
-    {
-        for(j=0; j<6;j++)
-        {
-            xp << xp_save.at(i,j) << " ";
-        }
-        xp << endl;
-    }
-    xp.close();
-
-    string xsFileName = "./write_read/xs_" + SaveName + ".dat";
-    xs.open(xsFileName);
-    xs << setprecision(16);
-    for (i=0; i<N+1; i++)
-    {
-        for(j=0; j<6;j++)
-        {
-            xs << xs_save.at(i,j) << " ";
-        }
-        xs << endl;
-    }
-    xs.close();
-
-    string uFileName = "./write_read/u_" + SaveName + ".dat";
-    u.open(uFileName);
-    u << setprecision(16);
-    for (i=0; i<N; i++)
-    {
-        for(j=0; j<3;j++)
-        {
-            u << u_save.at(i,j) << " ";
-        }
-        u << endl;
-    }
-    u.close();
-
-    string xpadjFileName = "./write_read/xpadj_" + SaveName + ".dat";
-    xpadj.open(xpadjFileName);
-    xpadj << setprecision(16);
-    for (i=0; i<N; i++)
-    {
-        for(j=0; j<6;j++)
-        {   
-            xpadj << xpadj_save.at(i,j) << " ";
-        }
-        xpadj << endl;
-    }
-    xpadj.close();
-
-    string DMFileName = "./write_read/DM_" + SaveName + ".dat";
-    DM.open(DMFileName);
-    DM << setprecision(16);
-    for (i=0; i<N; i++)
-    {
-        DM << DM_save[i] << endl;
-    }
-    DM.close();
-
-    string tCAFileName = "./write_read/tCA_" + SaveName + ".dat";
-    tCA.open(tCAFileName);
-    tCA << setprecision(16);
-    for (i=0; i<N; i++)
-    {
-        tCA << tCA_save[i] << endl;
-    }
-    tCA.close();
-
-    string deltarFileName = "./write_read/DeltaRB_" + SaveName + ".dat";
-    deltar.open(deltarFileName);
-    deltar << setprecision(16);
-    for (i=0; i<N; i++)
-    {
-        for(j=0; j<3;j++)
-        {   
-            deltar << DeltaRB_save.at(i,j) << " ";
-        }
-        deltar << endl;
-    }
-    deltar.close();
-    return 1;
-}
-
 DA Distance_Metric(int DM_Case,AlgebraicVector<DA> DeltaRB, AlgebraicMatrix<DA> P, double R){
     DA DM;
     switch(DM_Case){
@@ -633,11 +530,6 @@ DA Distance_Metric(int DM_Case,AlgebraicVector<DA> DeltaRB, AlgebraicMatrix<DA> 
             DM = dot(DeltaRB,P.inv() * DeltaRB);
             break;
         }
-        // case 3: // PoC
-        // {
-        //     DM = ConstPoC(DeltaRB, P, R);
-        //     break;
-        // }
         default: // Handle unexpected DM_Case values
         {
             throw std::invalid_argument("Invalid Distance Metric");
@@ -646,27 +538,12 @@ DA Distance_Metric(int DM_Case,AlgebraicVector<DA> DeltaRB, AlgebraicMatrix<DA> 
     return DM;
 }
 
-std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<double>, double, double, DA, DA, AlgebraicVector<DA>> IterativeDA(int n, int N, int DM_Case, AlgebraicVector<DA> xp_tnp1_DA, AlgebraicVector<DA> xs_tnp1_DA, double ThrustMagnitude, DA DM, DA tCA, AlgebraicVector<DA> DeltaRB, AlgebraicMatrix<double> P, double R){
-    int i;
-    int j;
-    AlgebraicVector<double> Evaluated_Control(9);
-    AlgebraicVector<DA>     Evaluated_NextIt(9);
-    AlgebraicVector<DA>     Evaluated_CurrentIt(9);
-
-    double DM_Evaluated_Control;
-    double tCA_Evaluated_Control;
-    AlgebraicVector<double> DeltaRB_Evaluated_Control(2);
-    AlgebraicVector<double> xp_tnp1_Evaluated_Control(6);
-
-    DA DM_NextIt;
-    DA tCA_NextIt;
-    double ConvRadius;
-    AlgebraicVector<DA> DeltaRB_NextIt(2);
-    AlgebraicVector<DA> ConvRadiusEval(9);
-    AlgebraicVector<DA> DeltaRB_loc(2);
-
-    AlgebraicVector<double> u_OptFO_tn(3);
-    
+std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<double>, double, double, DA, DA, AlgebraicVector<DA>, double, bool> IterativeDA(int n, int N, int DM_Case, AlgebraicVector<DA> xp_tnp1_DA, AlgebraicVector<DA> xs_tnp1_DA, double ThrustMagnitude, DA DM, DA tCA, AlgebraicVector<DA> DeltaRB, AlgebraicMatrix<double> P, double R, double lim){
+    AlgebraicVector<double> Evaluated_Control(10), DeltaRB_Evaluated_Control(2), xp_tnp1_Evaluated_Control(6), u_OptFO_tn(3);
+    AlgebraicVector<DA>     Evaluated_NextIt(10), Evaluated_CurrentIt(10), DeltaRB_NextIt(2), DeltaRB_loc(2), ConvRadiusEval(10);
+    double                  DM_Evaluated_Control, tCA_Evaluated_Control, alpha_ev, alpha_ev2, ConvRadius;
+    DA                      DM_NextIt, tCA_NextIt; 
+    int                     i, j;
     
     for (i=0; i<6; i++){
         ConvRadiusEval[i] = 0.0;                                                                         // The thrust u(tn) has no influence on dr(tn) and dv(tn); for evaluation, these are set to 0
@@ -674,6 +551,7 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
     for (i=0; i<3; i++){
         ConvRadiusEval[i+6] = DA(7+i);                                             // The optimal thrust in first-order approximation
     }
+    ConvRadiusEval[9] = 0.0;                                                                         // The thrust u(tn) has no influence on dr(tn) and dv(tn); for evaluation, these are set to 0
 
     if(n==N-1){ 
         AlgebraicMatrix<DA> Pb(2,2);
@@ -702,6 +580,7 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
             Evaluated_CurrentIt[i+3] = xp_tnp1_DA[i+3] - cons(xp_tnp1_DA[i+3]);
             Evaluated_CurrentIt[i+6] = 0*DA(i+7);
         }
+        Evaluated_CurrentIt[9] = 0.0;
         DM                            = DM.eval(Evaluated_CurrentIt);                                   // Evaluation of EucDis from previous iteration with dependencies of current iteration
         tCA                           = tCA.eval(Evaluated_CurrentIt);                                   // Evaluation of EucDis from previous iteration with dependencies of current iteration
         DeltaRB                       = DeltaRB.eval(Evaluated_CurrentIt);                                   // Evaluation of EucDis from previous iteration with dependencies of current iteration
@@ -721,7 +600,7 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
     for (i=0; i<3; i++){
         Evaluated_Control[i+6] = ThrustMagnitude*u_OptFO_tn[i];                                             // The optimal thrust in first-order approximation
     }
-
+    Evaluated_Control[9] = 0.0;
     DM_Evaluated_Control                    = DM.eval(Evaluated_Control);
     tCA_Evaluated_Control                   = tCA.eval(Evaluated_Control);
     xp_tnp1_Evaluated_Control               = xp_tnp1_DA.eval(Evaluated_Control);
@@ -732,6 +611,7 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
         Evaluated_NextIt[i+3] = DA(i+4);
         Evaluated_NextIt[i+6] = ThrustMagnitude*u_OptFO_tn[i]; //
     }
+    Evaluated_NextIt[9]   = 0.0;
 
     DM_NextIt                  = DM.eval(Evaluated_NextIt);
     tCA_NextIt                 = tCA.eval(Evaluated_NextIt);
@@ -743,5 +623,31 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
         DeltaRB_NextIt             = DeltaRB.eval(Evaluated_NextIt);
         DeltaRB_Evaluated_Control  = DeltaRB.eval(Evaluated_Control);
     }
-    return std::make_tuple(xp_tnp1_Evaluated_Control, u_OptFO_tn, DeltaRB_Evaluated_Control, DM_Evaluated_Control, tCA_Evaluated_Control, DM_NextIt, tCA_NextIt, DeltaRB_NextIt);
+    bool breakyes = 0;
+    if (DM_Evaluated_Control >= lim){
+        AlgebraicVector<DA> Evaluated_alpha(10);
+        for (i=0; i<3; i++){
+            Evaluated_alpha[i]   = 0.0;                                                                         // The thrust u(tn) has no influence on dr(tn) and dv(tn); for evaluation, these are set to 0
+            Evaluated_alpha[i+3] = 0.0;                                                                         // The thrust u(tn) has no influence on dr(tn) and dv(tn); for evaluation, these are set to 0
+            Evaluated_alpha[i+6] = ThrustMagnitude*u_OptFO_tn[i];                                             // The optimal thrust in first-order approximation
+        }
+        Evaluated_alpha[9] = DA(10);
+
+        DA                  DM_alpha       = DM.eval(Evaluated_alpha);
+        DA                  tca_alpha      = tCA.eval(Evaluated_alpha);
+        AlgebraicVector<DA> DeltaRB_alpha  = DeltaRB.eval(Evaluated_alpha);
+        double c0 = DM_Evaluated_Control - lim;
+        double c1 = cons(DM_alpha.deriv(10));
+        double c2 = cons(DM_alpha.deriv(10).deriv(10));
+        alpha_ev                     = -c0/cons(DM_alpha.deriv(10));
+        // alpha_ev                     = (-c1 - sqrt(c1*c1-4*c2*c0))/(2*c2);
+        // alpha_ev2 = alpha_ev*alpha_ev;
+        Evaluated_Control[9]         = alpha_ev;
+        DM_Evaluated_Control         = DM_Evaluated_Control         + alpha_ev*c1;// + alpha_ev2*c2;
+        tCA_Evaluated_Control        = tCA_Evaluated_Control        + alpha_ev*cons(tca_alpha.deriv(10));// + alpha_ev2*cons(tca_alpha.deriv(10).deriv(10));
+        DeltaRB_Evaluated_Control[0] = DeltaRB_Evaluated_Control[0] + alpha_ev*cons(DeltaRB_alpha[0].deriv(10));// + alpha_ev2*cons(DeltaRB_alpha[0].deriv(10).deriv(10));
+        DeltaRB_Evaluated_Control[1] = DeltaRB_Evaluated_Control[1] + alpha_ev*cons(DeltaRB_alpha[1].deriv(10));// + alpha_ev2*cons(DeltaRB_alpha[1].deriv(10).deriv(10));
+        breakyes = 1;
+    }
+    return std::make_tuple(xp_tnp1_Evaluated_Control, u_OptFO_tn, DeltaRB_Evaluated_Control, DM_Evaluated_Control, tCA_Evaluated_Control, DM_NextIt, tCA_NextIt, DeltaRB_NextIt, alpha_ev, breakyes);
 }

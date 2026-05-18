@@ -30,7 +30,7 @@ else
 end
 grid on
 box on
-xlabel('\xi [km]'); ylabel('\zeta [km]')
+xlabel('$\xi$ [km]'); ylabel('$\zeta$ [km]')
 axis equal
 hold off
 end

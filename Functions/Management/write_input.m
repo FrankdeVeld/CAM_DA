@@ -13,13 +13,13 @@ function input = write_input(scenario, params)
     input.P       = scenario.cov;
     input.HBR     = scenario.HBR;
     input.metric_case = params.metric_case;
-    input.breakOnThreshold = params.breakOnThreshold;
+    input.order     = params.order;
+    input.tCAHandling     = params.tCAHandling;
     if input.metric_case == 1
         input.lim = scenario.md_lim^2;
     else
         input.lim = scenario.smdLim;
     end
-    input.tCAHandling = 2;
     
     fid = fopen('./input.json','w'); 
     fwrite(fid,jsonencode(input),'char'); 
