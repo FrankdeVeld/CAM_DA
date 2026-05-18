@@ -1,7 +1,7 @@
 function input = write_input(scenario, params)
 
     input         = struct();
-    input.N       = params.nx_orb*params.n_orb+1; 
+    input.N       = params.nx_orb*(params.n_orb-params.n_orb_start)+1; 
     input.Lsc     = scenario.Lsc; 
     input.et      = 659871.07119168108; 
     input.t_back  = params.n_orb*2*pi; 
