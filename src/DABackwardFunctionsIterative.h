@@ -484,11 +484,17 @@ double Initialtca(int Scenario,double MuEarth) {
 }
 
 tuple<DA, AlgebraicVector<DA>, AlgebraicVector<DA>> tcaInversion(int tCAHandling, AlgebraicVector<double> u_Nom, AlgebraicVector<DA> u_tn, AlgebraicVector<DA> xp_tnp1_DA,AlgebraicVector<double> xs_tnp1_Vec, DA tCA_tn, double MuEarth, double Lsc){ 
-    AlgebraicVector<DA>     xp_tCA_DA(6);                                                             // Initialise primary state at tCA as DA object 
+    AlgebraicVector<DA>     xp_tCA_DA(6);                                                             
     AlgebraicVector<DA>     xs_tCA_DA(6); 
     AlgebraicVector<DA>     xrel_tCA_DA(6);                     
-    //cout << "tCA_DA: " << tCA_tn << endl;
     switch(tCAHandling){
+        case 0: // not working
+        {
+            xp_tCA_DA        = xp_tnp1_DA;
+            xs_tCA_DA        = xp_tnp1_DA;
+            tCA_tn           = DA(10);
+            break;
+        }
         case 1:
         {
             AlgebraicVector<DA> xs_tnp1_DA;
@@ -503,7 +509,7 @@ tuple<DA, AlgebraicVector<DA>, AlgebraicVector<DA>> tcaInversion(int tCAHandling
             tCA_tn           = findTCA(xrel_tCA_DA, 10);
             break;
         }
-        case 2: // This might not be accurate enough in first-order, as I'm seeing tca discrepancies
+        case 2:
         {
             xp_tCA_DA        = xp_tnp1_DA  + TBAcc(xp_tnp1_DA, u_Nom + u_tn, 0.0, MuEarth, Lsc)*tCA_tn;              // Picard-Lindelöf integration in first order
             xs_tCA_DA        = xs_tnp1_Vec + TBAcc(xs_tnp1_Vec, {0.0, 0.0, 0.0}, 0.0, MuEarth, Lsc)*tCA_tn;          // Picard-Lindelöf integration in first order
@@ -538,7 +544,7 @@ DA Distance_Metric(int DM_Case,AlgebraicVector<DA> DeltaRB, AlgebraicMatrix<DA> 
     return DM;
 }
 
-std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<double>, double, double, DA, DA, AlgebraicVector<DA>, double, bool> IterativeDA(int n, int N, int DM_Case, AlgebraicVector<DA> xp_tnp1_DA, AlgebraicVector<DA> xs_tnp1_DA, double ThrustMagnitude, DA DM, DA tCA, AlgebraicVector<DA> DeltaRB, AlgebraicMatrix<double> P, double R, double lim){
+std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<double>, double, double, DA, DA, AlgebraicVector<DA>, double, bool> IterativeDA(int n, int N, int DM_Case, AlgebraicVector<DA> xp_tnp1_DA, AlgebraicVector<DA> xs_tnp1_DA, double ThrustMagnitude, DA DM, DA tCA, AlgebraicVector<DA> DeltaRB, AlgebraicMatrix<double> P, double R, double lim, int refineLastInterval){
     AlgebraicVector<double> Evaluated_Control(10), DeltaRB_Evaluated_Control(2), xp_tnp1_Evaluated_Control(6), u_OptFO_tn(3);
     AlgebraicVector<DA>     Evaluated_NextIt(10), Evaluated_CurrentIt(10), DeltaRB_NextIt(2), DeltaRB_loc(2), ConvRadiusEval(10);
     double                  DM_Evaluated_Control, tCA_Evaluated_Control, alpha_ev, alpha_ev2, ConvRadius;
@@ -625,28 +631,33 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
     }
     bool breakyes = 0;
     if (DM_Evaluated_Control >= lim){
-        AlgebraicVector<DA> Evaluated_alpha(10);
-        for (i=0; i<3; i++){
-            Evaluated_alpha[i]   = 0.0;                                                                         // The thrust u(tn) has no influence on dr(tn) and dv(tn); for evaluation, these are set to 0
-            Evaluated_alpha[i+3] = 0.0;                                                                         // The thrust u(tn) has no influence on dr(tn) and dv(tn); for evaluation, these are set to 0
-            Evaluated_alpha[i+6] = ThrustMagnitude*u_OptFO_tn[i];                                             // The optimal thrust in first-order approximation
-        }
-        Evaluated_alpha[9] = DA(10);
+        if (refineLastInterval == 1){
+            AlgebraicVector<DA> Evaluated_alpha(10);
+            for (i=0; i<3; i++){
+                Evaluated_alpha[i]   = 0.0;                                                                         // The thrust u(tn) has no influence on dr(tn) and dv(tn); for evaluation, these are set to 0
+                Evaluated_alpha[i+3] = 0.0;                                                                         // The thrust u(tn) has no influence on dr(tn) and dv(tn); for evaluation, these are set to 0
+                Evaluated_alpha[i+6] = ThrustMagnitude*u_OptFO_tn[i];                                             // The optimal thrust in first-order approximation
+            }
+            Evaluated_alpha[9] = DA(10);
 
-        DA                  DM_alpha       = DM.eval(Evaluated_alpha);
-        DA                  tca_alpha      = tCA.eval(Evaluated_alpha);
-        AlgebraicVector<DA> DeltaRB_alpha  = DeltaRB.eval(Evaluated_alpha);
-        double c0 = DM_Evaluated_Control - lim;
-        double c1 = cons(DM_alpha.deriv(10));
-        double c2 = cons(DM_alpha.deriv(10).deriv(10));
-        alpha_ev                     = -c0/cons(DM_alpha.deriv(10));
-        // alpha_ev                     = (-c1 - sqrt(c1*c1-4*c2*c0))/(2*c2);
-        // alpha_ev2 = alpha_ev*alpha_ev;
-        Evaluated_Control[9]         = alpha_ev;
-        DM_Evaluated_Control         = DM_Evaluated_Control         + alpha_ev*c1;// + alpha_ev2*c2;
-        tCA_Evaluated_Control        = tCA_Evaluated_Control        + alpha_ev*cons(tca_alpha.deriv(10));// + alpha_ev2*cons(tca_alpha.deriv(10).deriv(10));
-        DeltaRB_Evaluated_Control[0] = DeltaRB_Evaluated_Control[0] + alpha_ev*cons(DeltaRB_alpha[0].deriv(10));// + alpha_ev2*cons(DeltaRB_alpha[0].deriv(10).deriv(10));
-        DeltaRB_Evaluated_Control[1] = DeltaRB_Evaluated_Control[1] + alpha_ev*cons(DeltaRB_alpha[1].deriv(10));// + alpha_ev2*cons(DeltaRB_alpha[1].deriv(10).deriv(10));
+            DA                  DM_alpha       = DM.eval(Evaluated_alpha);
+            DA                  tca_alpha      = tCA.eval(Evaluated_alpha);
+            AlgebraicVector<DA> DeltaRB_alpha  = DeltaRB.eval(Evaluated_alpha);
+            double c0 = DM_Evaluated_Control - lim;
+            double c1 = cons(DM_alpha.deriv(10));
+            double c2 = cons(DM_alpha.deriv(10).deriv(10));
+            alpha_ev  = -c0/cons(DM_alpha.deriv(10));
+            // alpha_ev                     = (-c1 - sqrt(c1*c1-4*c2*c0))/(2*c2);
+            for (i=0; i<3; i++){
+                Evaluated_Control[i]   = 0.0;                                                                         // The thrust u(tn) has no influence on dr(tn) and dv(tn); for evaluation, these are set to 0
+                Evaluated_Control[i+3] = 0.0;                                                                         // The thrust u(tn) has no influence on dr(tn) and dv(tn); for evaluation, these are set to 0
+                Evaluated_Control[i+6] = 0.0;                                             
+            }
+            Evaluated_Control[9]      = alpha_ev;
+            DM_Evaluated_Control      = DM_alpha.eval(Evaluated_Control);
+            tCA_Evaluated_Control     = tca_alpha.eval(Evaluated_Control);
+            DeltaRB_Evaluated_Control = DeltaRB_alpha.eval(Evaluated_Control);
+        }
         breakyes = 1;
     }
     return std::make_tuple(xp_tnp1_Evaluated_Control, u_OptFO_tn, DeltaRB_Evaluated_Control, DM_Evaluated_Control, tCA_Evaluated_Control, DM_NextIt, tCA_NextIt, DeltaRB_NextIt, alpha_ev, breakyes);

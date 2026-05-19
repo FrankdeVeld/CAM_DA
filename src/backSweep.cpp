@@ -42,17 +42,18 @@ int main( void )
     //////////////////////////////////////////////////////////////// READ JSON INPUT ///////////////////////////////////////////////////////////////////////////////
     json jin = read_json("./input.json");
 
-    int N            = jin.at("N").get<int>();
-    int DM_Case      = jin.at("metric_case").get<int>();        // 1=Euclidean, 2=SMD
-    int tCAHandling  = jin.at("tCAHandling").get<int>();
-    int order        = jin.at("order").get<int>();        // 1=Euclidean, 2=SMD
-    double t_back    = jin.at("t_back").get<double>();   // [s], dimensional
-    double t_start   = jin.at("t_start").get<double>();   // [s], dimensional
-    double uMax      = jin.at("uMax").get<double>();       // [km/s^2], dimensional thrust magnitude
-    double Lsc       = jin.at("Lsc").get<double>();        // [km]
-    double R         = jin.at("HBR").get<double>();        // hard-body radius [km]
-    double lim       = jin.at("lim").get<double>();        
-    double smd0      = jin.at("smd0").get<double>();        
+    int N                   = jin.at("N").get<int>();
+    int DM_Case             = jin.at("metric_case").get<int>();        // 1=Euclidean, 2=SMD
+    int tCAHandling         = jin.at("tCAHandling").get<int>();
+    int order               = jin.at("order").get<int>();        // 1=Euclidean, 2=SMD
+    int refineLastInterval  = jin.at("refineLastInterval").get<int>();
+    double t_back           = jin.at("t_back").get<double>();   // [s], dimensional
+    double t_start          = jin.at("t_start").get<double>();   // [s], dimensional
+    double uMax             = jin.at("uMax").get<double>();       // [km/s^2], dimensional thrust magnitude
+    double Lsc              = jin.at("Lsc").get<double>();        // [km]
+    double R                = jin.at("HBR").get<double>();        // hard-body radius [km]
+    double lim              = jin.at("lim").get<double>();        
+    double smd0             = jin.at("smd0").get<double>();        
     
     // States at TCA in dimensional units [km, km/s], 6-element arrays
     auto xptf_std = jin.at("xp_tCA").get<vector<double>>();
@@ -82,9 +83,7 @@ int main( void )
     AlgebraicVector<double> u_Nom = {0.0, 0.0, 0.0};
     double dt = (t_back-t_start)/(N-1);
 
-    DA DM_tn, tCA_tn;
-    AlgebraicVector<DA> DeltaRB_tn(3);
-
+    DA DM_tn, tCA_tn, DM_NextIt, tCA_NextIt;
     AlgebraicVector<DA> u_tn(3), xp_tn_DA(6), xp_tn_Vec(6), xp_tnp1_DA(6), xs_tCA_DA(6), xp_tCA_DA(6), Evaluated_tCA(10), DeltaRB_tn(2), DeltaRB_NextIt(2);
 
     double DM_Evaluated_Control, tCA_Evaluated_Control;
@@ -107,15 +106,11 @@ int main( void )
         xp_tn_Vec = KeplerProp(xp_tf + da_null, - (t_n - alpha), 1.0);
 
         for (i=0; i<3; i++){
-            rp_tn_DA[i] = xp_tn_Vec[i]   + DA(i+1);
-            vp_tn_DA[i] = xp_tn_Vec[i+3] + DA(i+4);
-            u_tn[i]     = DA(i+7);
+            xp_tn_DA[i]   = xp_tn_Vec[i]   + DA(i+1);
+            xp_tn_DA[i+3] = xp_tn_Vec[i+3]   + DA(i+4);
+            u_tn[i]       = DA(i+7);
         }
-        for (i=0; i<3; i++){
-            xp_tn_DA[i]   = rp_tn_DA[i];
-            xp_tn_DA[i+3] = vp_tn_DA[i];
-        }
-
+        
         xp_tnp1_DA  = RK78(6, xp_tn_DA, {u_Nom[0]+u_tn[0], u_Nom[1]+u_tn[1], u_Nom[2]+u_tn[2]}, da_null, dt - alpha, TBAcc, 1.0, Lsc);
 
         if (n == N-1){
@@ -128,7 +123,7 @@ int main( void )
             xs_tCA_DA = xs_tCA_DA.eval(Evaluated_tCA);
         } 
         tie(xp_tnp1_Evaluated_Control, u_OptFO_tn, DeltaRB_Evaluated_Control, DM_Evaluated_Control, tCA_Evaluated_Control, DM_NextIt, tCA_NextIt, DeltaRB_NextIt, alpha_ev, breakyes) =
-                IterativeDA(n, N, DM_Case, xp_tnp1_DA, xs_tCA_DA, uMax, DM_tn, tCA_tn, DeltaRB_tn, P, R, lim);
+                IterativeDA(n, N, DM_Case, xp_tnp1_DA, xs_tCA_DA, uMax, DM_tn, tCA_tn, DeltaRB_tn, P, R, lim, refineLastInterval);
         DM_tn      = DM_NextIt;
         tCA_tn     = tCA_NextIt;
         DeltaRB_tn = DeltaRB_NextIt;
