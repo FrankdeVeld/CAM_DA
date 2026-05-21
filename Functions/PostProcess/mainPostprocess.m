@@ -43,17 +43,17 @@ if params.metric_case == 2
     xlabel('Time before TCA [s]')
     ylabel('SMD relative error [$\%$]')
     % 
-    % figure
-    % semilogy(t,outSim.poc)
-    % hold on
-    % semilogy(t,validation.poc)
-    % ylim([1e-10,1e-2])
+    figure
+    semilogy(t,outSim.poc)
+    hold on
+    semilogy(t,validation.poc)
+    ylim([1e-10,1])
 
-    % figure
-    % semilogy(t,poc_err)
-    % grid on
-    % xlabel('Time before TCA [s]')
-    % ylabel('PoC relative error [$\%$]')
+    figure
+    semilogy(t,poc_err)
+    grid on
+    xlabel('Time before TCA [s]')
+    ylabel('PoC relative error [$\%$]')
 else
     % figure
     % plot(t,sqrt(outSim.m_d)*input.Lsc)

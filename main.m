@@ -17,16 +17,17 @@ set(0,'defaultfigurecolor',[1 1 1])
 
 %Parameters
 params = struct( ...
-    'mass',             800, ... % kg (Starlink v2)
-    'thrust',           300, ... % mN (Starlink v2)
-    'md_lim_dim',       2, ...   % km
-    'pocLim',           1e-6, ... 
-    'nx_orb',           360, ...  % Number of nodes per orbit
-    'n_orb',            0.7, ...   % Number of orbits before TCA
-    'n_orb_start',      0.5, ...   % Number of orbits before TCA
-    'metric_case',      2, ...    % 1: miss distance, 2: SMD
-    'order',            2, ...    % 1: DA order
-    'tCAHandling',      2 ...     % 1: Fix, 2: changing
+    'mass',               800, ...  % kg (Starlink v2)
+    'thrust',             300, ...  % mN (Starlink v2)
+    'md_lim_dim',         2, ...    % km
+    'pocLim',             1e-6, ... 
+    'nx_orb',             120, ...  % Number of nodes per orbit
+    'n_orb',              0.2, ...    % Number of orbits before TCA
+    'n_orb_start',        0, ...    % Number of orbits before TCA
+    'metric_case',        2, ...    % 1: miss distance, 2: SMD
+    'order',              2, ...    % 1: DA order
+    'tCAHandling',        2, ...     % 0: Fix, 1: DA, 2: Picard-Lindelhof
+    'refineLastInterval', 0 ...     % 0: Fix, 1: DA, 2: Picard-Lindelhof
     );
 params.ctrlMax_dim = params.thrust/1e6/params.mass; % km/s^2
 
@@ -43,7 +44,8 @@ input = write_input(scenario, params);
 %%
 outSim = readBackSweepOutput('output.json',input,scenario,params.metric_case);
 
-%% Validation and postprocessing
+%% Validation
 validation = validateBackSweep(input,outSim);
 
+%% Postprocessing
 mainPostprocess(outSim, validation, scenario, input, params)
