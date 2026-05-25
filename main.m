@@ -27,7 +27,7 @@ params = struct( ...
     'metric_case',        2, ...    % 1: miss distance, 2: SMD
     'order',              2, ...    % 1: DA order
     'tCAHandling',        2, ...     % 0: Fix, 1: DA, 2: Picard-Lindelhof
-    'refineLastInterval', 0 ...     % 0: Fix, 1: DA, 2: Picard-Lindelhof
+    'refineLastInterval', 1 ...     % 0: Fix, 1: DA, 2: Picard-Lindelhof
     );
 params.ctrlMax_dim = params.thrust/1e6/params.mass; % km/s^2
 

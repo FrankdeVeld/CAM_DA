@@ -23,8 +23,8 @@ function h = plotMeanSigma(t, mu, sigma)
         error('t, mu, and sigma must have the same length.');
     end
 
-    upper = mu + sigma;
-    lower = mu - sigma;
+    upper = mu + 3*sigma;
+    lower = mu - 3*sigma;
     
     % Shaded region
     h.patch = fill([t; flipud(t)], [upper; flipud(lower)], ...
@@ -34,7 +34,7 @@ function h = plotMeanSigma(t, mu, sigma)
     hold on;
 
     % Mean line
-    h.mean = plot(t, mu, 'k', 'LineWidth', 2);
+    h.mean = plot(t, mu, 'k', 'LineWidth', 1.5);
 
     % Optional styling
     grid on;
