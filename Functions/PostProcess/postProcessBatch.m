@@ -12,35 +12,27 @@ start_time = less_than(start_time,prc);
 
 t_vec = flip(linspace(0,params.n_orb,params.nx_orb*params.n_orb+1));
 
-% f = figure;
-% violin(abs_err);
-% f = figure;
-% violin(rel_err);
-% f = figure;
-% violin(dvTot);
-% f = figure;
-% violin(max_tca_shift);
-col = [0, 0.4470, 0.7410];
+% col = [0, 0.4470, 0.7410];
 
 % f2 = figure;
 % plot_cdf(rel_err/100,col)
 % xlabel('SMD relative error')
-
-f3 = figure;
-plot_cdf(dvTot,col)
-xlabel('Total $\Delta v$ [m/s]')
-
-f4 = figure;
-plot_cdf(max_tca_shift,col)
-xlabel('TCA shift [s]')
-
-f5 = figure;
-plot_cdf(comp_time,col)
-xlabel('Computation time [ms]')
-
-f6 = figure;
-plot_cdf(start_time,col)
-xlabel('Thrust duration [s]')
+% 
+% f3 = figure;
+% plot_cdf(dvTot,col)
+% xlabel('Total $\Delta v$ [m/s]')
+% 
+% f4 = figure;
+% plot_cdf(max_tca_shift,col)
+% xlabel('TCA shift [s]')
+% 
+% f5 = figure;
+% plot_cdf(comp_time,col)
+% xlabel('Computation time [ms]')
+% 
+% f6 = figure;
+% plot_cdf(start_time,col)
+% xlabel('Thrust duration [s]')
 
 f7 = figure;
 [mu_R,sigma_R] = cellNodeStats(uR_all,'true');
@@ -49,14 +41,18 @@ f7 = figure;
 
 subplot(3,1,1)
 plotMeanSigma(t_vec,mu_R,sigma_R);
-ylabel('$u_R$')
+axis tight
+ylabel('$|u_R|$')
 subplot(3,1,2)
 plotMeanSigma(t_vec,mu_T,sigma_T);
-ylabel('$u_T$')
+axis tight
+ylabel('$|u_T|$')
 subplot(3,1,3)
 plotMeanSigma(t_vec,mu_N,sigma_N);
+axis tight
 xlabel('Orbits before TCA')
-ylabel('$u_N$')
+ylabel('$|u_N|$')
+ylim([0,1])
 
 f8 = figure;
 [mu_err,sigma_err] = cellNodeStats(smd_rel_err_all,'false');
@@ -83,25 +79,25 @@ col = [0.8500, 0.3250, 0.0980];
 % plot_cdf(rel_err/100,col)
 % hold off
 
-f3 = figure(f3);
-hold on
-plot_cdf(dvTot,col)
-
-f4 = figure(f4);
-hold on
-plot_cdf(max_tca_shift,col)
-hold off
-legend('SMD','MD','Location','southeast')
-
-f5 = figure(f5);
-hold on
-plot_cdf(comp_time,col)
-hold off
-legend('SMD','MD','Location','southeast')
-
-f6 = figure(f6);
-hold on
-plot_cdf(start_time,col)
+% f3 = figure(f3);
+% hold on
+% plot_cdf(dvTot,col)
+% 
+% f4 = figure(f4);
+% hold on
+% plot_cdf(max_tca_shift,col)
+% hold off
+% legend('SMD','MD','Location','southeast')
+% 
+% f5 = figure(f5);
+% hold on
+% plot_cdf(comp_time,col)
+% hold off
+% legend('SMD','MD','Location','southeast')
+% 
+% f6 = figure(f6);
+% hold on
+% plot_cdf(start_time,col)
 
 f9 = figure;
 [mu_R,sigma_R] = cellNodeStats(uR_all,'true');
@@ -110,56 +106,61 @@ f9 = figure;
 
 subplot(3,1,1)
 plotMeanSigma(t_vec(length(t_vec)-length(mu_R)+1:end),mu_R,sigma_R);
-ylabel('$u_R$')
+ylabel('$|u_R|$')
 axis tight
+xlim([0,0.65])
 subplot(3,1,2)
 plotMeanSigma(t_vec(length(t_vec)-length(mu_T)+1:end),mu_T,sigma_T);
-ylabel('$u_T$')
+ylabel('$|u_T|$')
 axis tight
+xlim([0,0.65])
 subplot(3,1,3)
 plotMeanSigma(t_vec(length(t_vec)-length(mu_N)+1:end),mu_N,sigma_N);
 xlabel('Orbits before TCA')
-ylabel('$u_N$')
+ylabel('$|u_N|$')
 axis tight
+xlim([0,0.65])
 
 f10 = figure;
 [mu_err,sigma_err] = cellNodeStats(md_rel_err_all,'false');
 
 plotMeanSigma(t_vec,mu_err,sigma_err);
+axis tight
 xlabel('Orbits before TCA')
 ylabel('MD relative error')
+xlim([0,0.65])
 
 %%
-load('data/FO_comparison_SMD.mat')
-col = [0, 0.4470, 0.7410];
-
-f3 = figure(f3);
-plot_cdf(DvTot,col,'--')
-
-f6 = figure(f6);
-plot_cdf(t_thrust,col,'--')
+% load('data/FO_comparison_SMD.mat')
+% col = [0, 0.4470, 0.7410];
+% 
+% f3 = figure(f3);
+% plot_cdf(DvTot,col,'--')
+% 
+% f6 = figure(f6);
+% plot_cdf(t_thrust,col,'--')
 
 
 %%
-load('data/FO_comparison_MD.mat')
-col = [0.8500, 0.3250, 0.0980];
-
-f3 = figure(f3);
-plot_cdf(DvTot,col,'--')
-hold off
-legend('SMD','MD','SMD-FO','MD-FO','Location','southeast')
-
-f6 = figure(f6);
-plot_cdf(t_thrust,col,'--')
-hold off
-legend('SMD','MD','SMD-FO','MD-FO','Location','southeast')
+% load('data/FO_comparison_MD.mat')
+% col = [0.8500, 0.3250, 0.0980];
+% 
+% f3 = figure(f3);
+% plot_cdf(DvTot,col,'--')
+% hold off
+% legend('SMD','MD','SMD-FO','MD-FO','Location','southeast')
+% 
+% f6 = figure(f6);
+% plot_cdf(t_thrust,col,'--')
+% hold off
+% legend('SMD','MD','SMD-FO','MD-FO','Location','southeast')
 
 %% Save all figures
 % saveFigurePDF(f2, 'rel_err', 15, 10, 'centimeters')
-saveFigurePDF(f3, 'Figures/dv', 18, 6, 'centimeters')
-saveFigurePDF(f4, 'Figures/tca_shift', 15, 6, 'centimeters')
-saveFigurePDF(f5, 'Figures/comp_time', 15, 6, 'centimeters')
-saveFigurePDF(f6, 'Figures/start_time', 18, 6, 'centimeters')
+% saveFigurePDF(f3, 'Figures/dv', 18, 6, 'centimeters')
+% saveFigurePDF(f4, 'Figures/tca_shift', 15, 6, 'centimeters')
+% saveFigurePDF(f5, 'Figures/comp_time', 15, 6, 'centimeters')
+% saveFigurePDF(f6, 'Figures/start_time', 18, 6, 'centimeters')
 saveFigurePDF(f7, 'Figures/control_smd', 15, 10, 'centimeters')
 saveFigurePDF(f8, 'Figures/error_smd', 15, 6, 'centimeters')
 saveFigurePDF(f9, 'Figures/control_md', 15, 10, 'centimeters')

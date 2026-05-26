@@ -23,8 +23,10 @@ function h = plotMeanSigma(t, mu, sigma)
         error('t, mu, and sigma must have the same length.');
     end
 
-    upper = mu + 3*sigma;
-    lower = mu - 3*sigma;
+    upper = mu + sigma;
+    lower = mu - sigma;
+    lower(lower<0) = 0;
+    upper(upper>1) = 1;
     
     % Shaded region
     h.patch = fill([t; flipud(t)], [upper; flipud(lower)], ...
