@@ -6,15 +6,16 @@ md_err     = 100*abs(1-sqrt(outSim.m_d)./validation.m_d);
 
 e2b = validation.e2b;
 Pb = e2b*input.P*e2b';
-showEllipseBplane(Pb,input.lim,outSim.rB,validation.rB, ...
+showEllipseBplane(Pb,input.lim,t,outSim.rB,validation.rB, ...
                     input.metric_case,input.Lsc);
 
 figure
-plot(t,outSim.control)
+stairs(t,outSim.control,'LineWidth', 1.5)
 legend('R','T','N')
 grid on
 xlabel('Time before TCA [s]')
 ylabel('Normalized control')
+axis tight
 
 figure
 plot(t,outSim.deltaTca*scenario.Tsc)
@@ -43,11 +44,11 @@ if params.metric_case == 2
     xlabel('Time before TCA [s]')
     ylabel('SMD relative error [$\%$]')
     % 
-    figure
-    semilogy(t,outSim.poc)
-    hold on
-    semilogy(t,validation.poc)
-    ylim([1e-10,1])
+    % figure
+    % semilogy(t,outSim.poc)
+    % hold on
+    % semilogy(t,validation.poc)
+    % ylim([1e-10,1])
 
     figure
     semilogy(t,poc_err)

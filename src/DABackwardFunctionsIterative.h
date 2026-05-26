@@ -471,18 +471,6 @@ DA findTCA(const AlgebraicVector<DA> xrel, const int nvar){
   return tca;
 }
 
-double Initialtca(int Scenario,double MuEarth) {
-    double tca; 
-    switch(Scenario) {
-        case 1:
-            {
-            tca = 3600;
-            break;
-            }
-    }
-    return tca;
-}
-
 tuple<DA, AlgebraicVector<DA>, AlgebraicVector<DA>> tcaInversion(int tCAHandling, AlgebraicVector<double> u_Nom, AlgebraicVector<DA> u_tn, AlgebraicVector<DA> xp_tnp1_DA,AlgebraicVector<double> xs_tnp1_Vec, DA tCA_tn, double MuEarth, double Lsc){ 
     AlgebraicVector<DA>     xp_tCA_DA(6);                                                             
     AlgebraicVector<DA>     xs_tCA_DA(6); 

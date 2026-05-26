@@ -2,7 +2,7 @@ function [] = postProcessBatch()
 %POSTPROCESSBATCH Summary of this function goes here
 %   Detailed explanation goes here
 
-load('batch_results.mat');
+load('data/batch_results.mat');
 prc = 95;
 rel_err = less_than(rel_err,prc);
 dvTot = less_than(dvTot,prc);
@@ -40,7 +40,7 @@ xlabel('Computation time [ms]')
 
 f6 = figure;
 plot_cdf(start_time,col)
-xlabel('Start time [s]')
+xlabel('Thrust duration [s]')
 
 f7 = figure;
 [mu_R,sigma_R] = cellNodeStats(uR_all,'true');
@@ -67,7 +67,7 @@ ylabel('SMD relative error')
 
 %% Miss distance
 
-load('batch_results_md.mat');
+load('data/batch_results_md.mat');
 prc = 95;
 rel_err = less_than(rel_err,prc);
 dvTot = less_than(dvTot,prc);
@@ -86,8 +86,6 @@ col = [0.8500, 0.3250, 0.0980];
 f3 = figure(f3);
 hold on
 plot_cdf(dvTot,col)
-hold off
-legend('SMD','MD','Location','southeast')
 
 f4 = figure(f4);
 hold on
@@ -104,8 +102,6 @@ legend('SMD','MD','Location','southeast')
 f6 = figure(f6);
 hold on
 plot_cdf(start_time,col)
-hold off
-legend('SMD','MD','Location','southeast')
 
 f9 = figure;
 [mu_R,sigma_R] = cellNodeStats(uR_all,'true');
@@ -133,12 +129,37 @@ plotMeanSigma(t_vec,mu_err,sigma_err);
 xlabel('Orbits before TCA')
 ylabel('MD relative error')
 
+%%
+load('data/FO_comparison_SMD.mat')
+col = [0, 0.4470, 0.7410];
+
+f3 = figure(f3);
+plot_cdf(DvTot,col,'--')
+
+f6 = figure(f6);
+plot_cdf(t_thrust,col,'--')
+
+
+%%
+load('data/FO_comparison_MD.mat')
+col = [0.8500, 0.3250, 0.0980];
+
+f3 = figure(f3);
+plot_cdf(DvTot,col,'--')
+hold off
+legend('SMD','MD','SMD-FO','MD-FO','Location','southeast')
+
+f6 = figure(f6);
+plot_cdf(t_thrust,col,'--')
+hold off
+legend('SMD','MD','SMD-FO','MD-FO','Location','southeast')
+
 %% Save all figures
 % saveFigurePDF(f2, 'rel_err', 15, 10, 'centimeters')
-saveFigurePDF(f3, 'Figures/dv', 15, 6, 'centimeters')
+saveFigurePDF(f3, 'Figures/dv', 18, 6, 'centimeters')
 saveFigurePDF(f4, 'Figures/tca_shift', 15, 6, 'centimeters')
 saveFigurePDF(f5, 'Figures/comp_time', 15, 6, 'centimeters')
-saveFigurePDF(f6, 'Figures/start_time', 15, 6, 'centimeters')
+saveFigurePDF(f6, 'Figures/start_time', 18, 6, 'centimeters')
 saveFigurePDF(f7, 'Figures/control_smd', 15, 10, 'centimeters')
 saveFigurePDF(f8, 'Figures/error_smd', 15, 6, 'centimeters')
 saveFigurePDF(f9, 'Figures/control_md', 15, 10, 'centimeters')
