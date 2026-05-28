@@ -63,7 +63,7 @@ for j = N-1:-1:1
     ddt = 0;
     xs_tcaOff = propKepOde(xs_tca, zeros(3,1), tcaOff(j), mu);
     for k = j:N-1
-        if k == N-1; ddt = 0; end
+        if k == N-1; ddt = tcaOff(j); end
         u_k     = u_control(k,:)'*uMax;
         xp_hist(:,k+1) = propKepOde(xp_hist(:,k), u_k, dt(k) + ddt, mu);
     end

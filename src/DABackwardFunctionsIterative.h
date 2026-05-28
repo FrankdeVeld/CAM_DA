@@ -538,36 +538,39 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
     double                  DM_Evaluated_Control, tCA_Evaluated_Control, alpha_ev, alpha_ev2, ConvRadius;
     DA                      DM_NextIt, tCA_NextIt; 
     int                     i, j;
-    
+    // Convergence radius can be disregarded, we are not using it actually
     for (i=0; i<6; i++){
-        ConvRadiusEval[i] = 0.0;                                                                         // The thrust u(tn) has no influence on dr(tn) and dv(tn); for evaluation, these are set to 0
+        ConvRadiusEval[i] = 0.0;                
     }
     for (i=0; i<3; i++){
-        ConvRadiusEval[i+6] = DA(7+i);                                             // The optimal thrust in first-order approximation
+        ConvRadiusEval[i+6] = DA(7+i);          
     }
-    ConvRadiusEval[9] = 0.0;                                                                         // The thrust u(tn) has no influence on dr(tn) and dv(tn); for evaluation, these are set to 0
+    ConvRadiusEval[9] = 0.0;                   
 
     if(n==N-1){ 
         AlgebraicMatrix<DA> Pb(2,2);
+        // Compute the maps for the position in the B-plane (eq. 7a (28a in DA) from the paper)
         DeltaRB_loc = props::bplane_distance(xp_tnp1_DA, xs_tnp1_DA);
 
         if (DM_Case == 2) {
-        // Project covariance onto b-plane
+        // Project covariance onto b-plane (eq. 28 from the paper)
         AlgebraicVector<DA> vp(3), vs(3);
         for(i=0; i<3; i++){
-            // DA Vectors
             vp[i] = xp_tnp1_DA[i+3];
             vs[i] = xs_tnp1_DA[i+3];
         }
+        // DA matrix transformation from ECI to B-plane
         AlgebraicMatrix<DA> e2b3 = props::eci2Bplane(vp, vs);
         AlgebraicMatrix<DA> e2b(2,3); 
         for (j=0; j<3; j++) {
             e2b.at(0,j) = e2b3.at(0,j);
             e2b.at(1,j) = e2b3.at(2,j);
             }
+        // Project covariance onto the B-plane (eq. 7b (28b in DA) from the paper)
         Pb = similarity(e2b, P);
         }
-        DM          = Distance_Metric(DM_Case,DeltaRB_loc,Pb,R);
+        // Compute the metric (eq. 10 or 12 (29 in DA) from the paper)
+        DM  = Distance_Metric(DM_Case,DeltaRB_loc,Pb,R);
     } else { // Later iterations
         for(i=0; i<3; i++){
             Evaluated_CurrentIt[i]   = xp_tnp1_DA[i]   - cons(xp_tnp1_DA[i]);
@@ -575,14 +578,15 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
             Evaluated_CurrentIt[i+6] = 0*DA(i+7);
         }
         Evaluated_CurrentIt[9] = 0.0;
-        DM                            = DM.eval(Evaluated_CurrentIt);                                   // Evaluation of EucDis from previous iteration with dependencies of current iteration
-        tCA                           = tCA.eval(Evaluated_CurrentIt);                                   // Evaluation of EucDis from previous iteration with dependencies of current iteration
-        DeltaRB                       = DeltaRB.eval(Evaluated_CurrentIt);                                   // Evaluation of EucDis from previous iteration with dependencies of current iteration
+        // Evaluate in the current control (eq. 33 from the paper)
+        DM                            = DM.eval(Evaluated_CurrentIt);
+        tCA                           = tCA.eval(Evaluated_CurrentIt);
+        DeltaRB                       = DeltaRB.eval(Evaluated_CurrentIt);
     }
     
     ConvRadius = DM.eval(ConvRadiusEval).convRadius(1e-8,2);
-    //cout << "ConvRadius: " << ConvRadius << endl;
-    // In first-order approximation, the control can be derived from the partial derivative of the DA object EucDis
+
+    // Compute greedy control action (eq. 38 from the paper)
     for (i=0; i<3; i++){
         u_OptFO_tn[i] = cons(DM.deriv(7+i));                                           // The control is defined in the RTN reference frame
     }
@@ -606,7 +610,7 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
         Evaluated_NextIt[i+6] = ThrustMagnitude*u_OptFO_tn[i]; //
     }
     Evaluated_NextIt[9]   = 0.0;
-
+    // Evaluate for the next section of the sweep (eq. 37 from the paper)
     DM_NextIt                  = DM.eval(Evaluated_NextIt);
     tCA_NextIt                 = tCA.eval(Evaluated_NextIt);
     if(n==N-1){
@@ -618,6 +622,8 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
         DeltaRB_Evaluated_Control  = DeltaRB.eval(Evaluated_Control);
     }
     bool breakyes = 0;
+
+    // Refinement of the last node
     if (DM_Evaluated_Control >= lim){
         if (refineLastInterval == 1){
             AlgebraicVector<DA> Evaluated_alpha(10);
@@ -627,7 +633,7 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
                 Evaluated_alpha[i+6] = ThrustMagnitude*u_OptFO_tn[i];                                             // The optimal thrust in first-order approximation
             }
             Evaluated_alpha[9] = DA(10);
-
+            
             DA                  DM_alpha       = DM.eval(Evaluated_alpha);
             DA                  tca_alpha      = tCA.eval(Evaluated_alpha);
             AlgebraicVector<DA> DeltaRB_alpha  = DeltaRB.eval(Evaluated_alpha);
@@ -637,8 +643,8 @@ std::tuple<AlgebraicVector<double>, AlgebraicVector<double>, AlgebraicVector<dou
             alpha_ev  = -c0/cons(DM_alpha.deriv(10));
             // alpha_ev                     = (-c1 - sqrt(c1*c1-4*c2*c0))/(2*c2);
             for (i=0; i<3; i++){
-                Evaluated_Control[i]   = 0.0;                                                                         // The thrust u(tn) has no influence on dr(tn) and dv(tn); for evaluation, these are set to 0
-                Evaluated_Control[i+3] = 0.0;                                                                         // The thrust u(tn) has no influence on dr(tn) and dv(tn); for evaluation, these are set to 0
+                Evaluated_Control[i]   = 0.0;
+                Evaluated_Control[i+3] = 0.0;
                 Evaluated_Control[i+6] = 0.0;                                             
             }
             Evaluated_Control[9]      = alpha_ev;
