@@ -1,6 +1,6 @@
 function [primary, secondary] = readCDM_CONGEN()
 mu     = 398600.4418;    % [m^3/s^2]
-cdm = load("./data/cdm").cdm_struc;
+cdm = load("./data/cdm").cdm;
 %% Primary
 x0p = cdm.x_tca_1;
 primary = cartesian2kepler(x0p,mu);
