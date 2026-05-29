@@ -31,8 +31,26 @@ function [mu, sigma] = cellNodeStats(C,yesnan)
         X(X==0) = nan;
     % end
     % Nodewise statistics across cells
-    mu    = mean(X, 2,'omitnan');
-    sigma = sqrt(var(X, 0, 2,'omitnan'));
-    mu(isnan(mu)) = 0;
-    sigma(isnan(sigma)) = 0;
+    % mu    = mean(X, 2,'omitnan');
+    % sigma = sqrt(var(X, 0, 2,'omitnan'));
+    foldedNormalPDF = @(y, mu, sigma) ...
+    (1./sigma) .* (normpdf((y - mu)./sigma) + normpdf((y + mu)./sigma));
+    % Negative log-likelihood (for mle)
+    nll = @(params) -sum(log(max(foldedNormalPDF(y, params(1), params(2)), eps)));
+    for j = 1:size(X,1)
+        data = X(j,:);
+        data = data(~isnan(data))';
+
+        % Initial guesses: mu ~ mean(x_signed), sigma ~ std(x_signed)
+        mu0 = mean(data);
+        sigma0 = std(data);
+        params0 = [mu0, sigma0];
+        
+        % Fit
+        [paramEsts, paramCI] = mle('negativeloglikelihood', nll, ...
+                                   'start', params0, ...
+                                   'lowerbounds', [-Inf, 0]);  % sigma > 0
+        mu_hat = paramEsts(1);
+        sigma_hat = paramEsts(2);
+    end
 end

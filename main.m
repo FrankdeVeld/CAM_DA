@@ -19,29 +19,31 @@ set(0,'defaultfigurecolor',[1 1 1])
 params = struct( ...
     'mass',               800, ...  % kg (Starlink v2)
     'thrust',             300, ...  % mN (Starlink v2)
-    'md_lim_dim',         2, ...    % km
-    'pocLim',             1e-6, ... 
+    'md_lim_dim',         2, ...    % km MD limit
+    'pocLim',             1e-6, ... % - PoC limit
     'nx_orb',             120, ...  % Number of nodes per orbit
-    'n_orb',              0.2, ...    % Number of orbits before TCA
-    'n_orb_start',        0, ...    % Number of orbits before TCA
-    'metric_case',        2, ...    % 1: miss distance, 2: SMD
-    'order',              2, ...    % 1: DA order
-    'tCAHandling',        2, ...     % 0: Fix, 1: DA, 2: Picard-Lindelhof
-    'refineLastInterval', 1 ...     % 0: Fix, 1: DA, 2: Picard-Lindelhof
+    'n_orb',              0.5, ...    % Number of orbits before TCA
+    'n_orb_start',        0, ...    % Number of orbits before TCA (redundant)
+    'metric_case',        1, ...    % 1: miss distance, 2: SMD
+    'order',              2, ...    % DA order (between 2 and 6)
+    'tCAHandling',        2, ...    % 0: Fix (not working), 1: DA, 2: Picard-Lindelhof
+    'refineLastInterval', 1 ...     % 0: no, 1: yes
     );
-params.ctrlMax_dim = params.thrust/1e6/params.mass; % km/s^2
+params.ctrlMax_dim = params.thrust/1e6/params.mass; % km/s^2 control magnitude 
 
 % Scenario definition
-[primary,secondary] = generateInitShort(1);
+% [primary,secondary] = generateInitShort(1);
+[primary,secondary] = readCDM_CONGEN();
+% Nondimensionalisation of the initial conditions and parameters
 scenario            = nondimensionalise(primary,secondary,params);
 
-% Write json input
+% Write json input for C++ code
 input = write_input(scenario, params);
 
 %% Optimisation
 !wsl ./build/bin/backSweep
 
-%%
+%Read json output
 outSim = readBackSweepOutput('output.json',input,scenario,params.metric_case);
 
 %% Validation

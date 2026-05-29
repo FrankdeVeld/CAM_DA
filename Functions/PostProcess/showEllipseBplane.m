@@ -1,4 +1,4 @@
-function [] = showEllipseBplane(PB,lim,traj,trajVal,metric,Lsc)
+function [] = showEllipseBplane(PB,lim,t,traj,trajVal,metric,Lsc)
 %relTrajEllipsoids plots the relative trajectories with ellipsoid
 %visualization
 %
@@ -7,11 +7,14 @@ function [] = showEllipseBplane(PB,lim,traj,trajVal,metric,Lsc)
 %--------------------------------------------------------------------------
 
 figure()
-plot(traj(:,1)*Lsc,traj(:,2)*Lsc,'k')
+scatter(traj(:,1)*Lsc,traj(:,2)*Lsc,40,t,'filled','Marker','o','MarkerEdgeColor','k')
+colormap('winter')
+cb = colorbar;
+ylabel(cb,'Time before TCA [s]','Rotation',270)
 hold on
-plot(traj(end,1)*Lsc,traj(end,2)*Lsc,'ko')
-plot(0,0,'k*')
-plot(trajVal(:,1)*Lsc,trajVal(:,2)*Lsc,'r.')
+plot(traj(end,1)*Lsc,traj(end,2)*Lsc,'ko','HandleVisibility','off')
+plot(0,0,'k*','HandleVisibility','off')
+scatter(trajVal(:,1)*Lsc,trajVal(:,2)*Lsc,40,t,'filled','Marker','o','MarkerEdgeColor','r')
 t          = 0:0.001:2*pi;
 if metric == 1
     plot(sqrt(lim)*Lsc*sin(t),sqrt(lim)*Lsc*cos(t),'k','HandleVisibility','off')
@@ -33,4 +36,5 @@ box on
 xlabel('$\xi$ [km]'); ylabel('$\zeta$ [km]')
 axis equal
 hold off
+% legend('Optimization','Validation')
 end
