@@ -58,7 +58,7 @@ function IntegrateCircleδΔr(NumTheta::Int, NumPoints::Int, t0_physical::Float6
 
     tspan_ode = (0.0, t0_physical) # Physical time for ODE solver (integrates backward)
     δΔr0_vec = zeros(T, 3)
-    STA = 1e-10; STR = 1e-10
+    STA = 1e-8; STR = 1e-8
     solver = Tsit5()
     
    # Enforce a LinRange for save_points_physical
@@ -82,7 +82,7 @@ function IntegrateCircleδΔr(NumTheta::Int, NumPoints::Int, t0_physical::Float6
     
     theta_ang_grid_rad = range(0.0, stop=2pi, length=NumTheta + 1)[1:NumTheta]
 
-    println("Starting backward integration for $NumTheta angles...")
+    #println("Starting backward integration for $NumTheta angles...")
     for n_angle_idx in 0:(NumTheta-1) # Corresponds to row in output arrays
         theta_float = n_angle_idx * 2.0 * pi / NumTheta
         theta_T::T = T(theta_float)
@@ -264,8 +264,11 @@ function IntegrateCircleδΔr(NumTheta::Int, NumPoints::Int, t0_physical::Float6
 
             # Differentiate the splines and evaluate at the original (reversed) time points
             # Interpolations.gradient gives a tuple (even for 1D). We need the first element.
-            dpk2_real_dt_interp = [Interpolations.gradient(spl_real, t_val)[1] for t_val in t_interp_for_deriv]
-            dpk2_imag_dt_interp = [Interpolations.gradient(spl_imag, t_val)[1] for t_val in t_interp_for_deriv]
+
+            t_min = bounds(spl_real.itp)[1][1]
+            t_max = bounds(spl_real.itp)[1][2]
+            dpk2_real_dt_interp = [Interpolations.gradient(spl_real, clamp(t_val, t_min, t_max))[1] for t_val in t_interp_for_deriv]
+            dpk2_imag_dt_interp = [Interpolations.gradient(spl_imag, clamp(t_val, t_min, t_max))[1] for t_val in t_interp_for_deriv]
             
             fft_coeffs_b2_scaled_dt_t[k_coeff_idx, :] = reverse(dpk2_real_dt_interp .+ im .* dpk2_imag_dt_interp)
         end
@@ -314,8 +317,14 @@ function IntegrateCircleδΔr(NumTheta::Int, NumPoints::Int, t0_physical::Float6
             spl_real = cubic_spline_interpolation(t_interp_range_for_deriv, p_k1_real_vs_t_reversed, extrapolation_bc=Throw())
             spl_imag = cubic_spline_interpolation(t_interp_range_for_deriv, p_k1_imag_vs_t_reversed, extrapolation_bc=Throw())
             # Interpolations.gradient gives a tuple (even for 1D). We need the first element.
-            dpk1_real_dt_interp = [Interpolations.gradient(spl_real, t_val)[1] for t_val in t_interp_for_deriv]
-            dpk1_imag_dt_interp = [Interpolations.gradient(spl_imag, t_val)[1] for t_val in t_interp_for_deriv]
+
+            t_min = bounds(spl_real.itp)[1][1]
+            t_max = bounds(spl_real.itp)[1][2]
+            dpk1_real_dt_interp = [Interpolations.gradient(spl_real, clamp(t_val, t_min, t_max))[1] for t_val in t_interp_for_deriv]
+            dpk1_imag_dt_interp = [Interpolations.gradient(spl_imag, clamp(t_val, t_min, t_max))[1] for t_val in t_interp_for_deriv]
+
+            # dpk1_real_dt_interp = [Interpolations.gradient(spl_real, t_val)[1] for t_val in t_interp_for_deriv]
+            # dpk1_imag_dt_interp = [Interpolations.gradient(spl_imag, t_val)[1] for t_val in t_interp_for_deriv]
             
             fft_coeffs_b1_scaled_dt_t[k_coeff_idx, :] = reverse(dpk1_real_dt_interp .+ im .* dpk1_imag_dt_interp)
         end
@@ -335,7 +344,7 @@ function IntegrateCircleδΔr(NumTheta::Int, NumPoints::Int, t0_physical::Float6
     end
 
 
-    println("Backward integration and FFT processing finished.")
+    #println("Backward integration and FFT processing finished.")
     return tIntTot_final, δΔrIntTot_final, uOptTot_final, B1Ref, B3U, fft_coeffs_b1_scaled_t, fft_coeffs_b1_scaled_dt_t, fft_coeffs_b2_scaled_t, fft_coeffs_b2_scaled_dt_t
 end
 
@@ -365,7 +374,7 @@ function δΔrScaling(NumTheta::Int, NumPoints::Int, δΔrIntTot::Array{T, 3},
     ΔR_ESS_F     = zeros(T, NumTheta, NumPoints, 3)
     ΔR_ESS_F_app = zeros(T, NumTheta + 1, NumPoints, 3)
 
-    println("Scaling integrated deviations to B-plane reachable set...")
+    #println("Scaling integrated deviations to B-plane reachable set...")
     scaling_factor::T = Epsilon / Sigma
 
     for n in 0:(NumTheta - 1)
@@ -389,6 +398,6 @@ function δΔrScaling(NumTheta::Int, NumPoints::Int, δΔrIntTot::Array{T, 3},
     # Use view for efficient assignment of the wrapped-around point
     ΔR_ESS_F_app[NumTheta + 1, :, :] = @view ΔR_ESS_F[1, :, :]
 
-    println("Scaling finished.")
+    #println("Scaling finished.")
     return ΔR_ESS_F_app; # Returns Array{T, 3}
 end

@@ -58,20 +58,40 @@ function uRSWPlot(tL, u_RSW_L)
     return uPlot
 end
 
-function PlotRelDis(t, Xrel_Traj, PlotBool)
-    row_norms = norm.(eachcol(Xrel_Traj))  # Compute row-wise norms
+function PlotRelDis(t, RelDis, RelVel, TimeDL, PlotBool, JuliaBool)
+    row_norms = norm.(eachcol(RelDis))  # Compute row-wise norms
+    inner_products = abs.(dot.(eachcol(RelDis), eachcol(RelVel)))
     Startk = 100
+    DistanceDL = 7.186789169206707e6
     if PlotBool
-        RelDisPlot = Plots.plot(vec(t[end-Startk:end]), row_norms[end-Startk:end], linewidth=3, label="Relative distance", yscale=:log10)  
+        RelDisPlot = Plots.plot(vec(t[end-Startk:end]).*TimeDL, row_norms[end-Startk:end].*DistanceDL, linewidth=3, label="Relative distance")#, yscale=:log10)  
 
-        Plots.xlabel!("Time (orbits)")
-        Plots.ylabel!("Relative distance (log scale)")  
+        Plots.xlabel!("Time [s]")
+        Plots.ylims!(1500, 2500)
+        Plots.ylabel!("Relative distance [m]") 
+        if JuliaBool 
+            Plots.title!("Relative distance over time, Julia") 
+        else 
+            Plots.title!("Relative distance over time, Matlab") 
+        end
 
         display(RelDisPlot)
+
+        DotProdPlot = Plots.plot(vec(t[end-Startk:end]).*TimeDL, inner_products[end-Startk:end], linewidth=3, label="Inner product Δr Δv")#, yscale=:log10)  
+
+        Plots.xlabel!("Time [s]")
+        Plots.ylabel!("||Inner product|| [-]")  
+        if JuliaBool 
+            Plots.title!("Inner product Δr Δv over time, Julia")
+        else 
+            Plots.title!("Inner product Δr Δv over time, Matlab")
+        end
+        display(DotProdPlot)
     end
 
     indexmin = argmin(row_norms[end-Startk:end])
-    tCA = t[end-Startk+indexmin]
+    tCA = t[end-Startk+indexmin-1]
+    mininner = inner_products[end-Startk+indexmin-1]
     mindis = minimum(row_norms[end-Startk:end])
-    return tCA, mindis
+    return tCA, mindis, mininner
 end

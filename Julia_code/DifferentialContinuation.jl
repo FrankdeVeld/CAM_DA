@@ -242,10 +242,16 @@ function solve_dc_fft(
         itp_dpk2_dt_imag_list[k_idx] = cubic_spline_interpolation(t_interp_range, imag.(dpk2_dt_series), extrapolation_bc=Throw())
     end
 
-    get_all_pk1_at_t(t) = SVector{NumTheta, Complex{eltype(t)}}(itp_pk1_real_list[i](t) + im*itp_pk1_imag_list[i](t) for i=1:NumTheta)
-    get_all_dpk1_dt_at_t(t) = SVector{NumTheta, Complex{eltype(t)}}(itp_dpk1_dt_real_list[i](t) + im*itp_dpk1_dt_imag_list[i](t) for i=1:NumTheta)
-    get_all_pk2_at_t(t) = SVector{NumTheta, Complex{eltype(t)}}(itp_pk2_real_list[i](t) + im*itp_pk2_imag_list[i](t) for i=1:NumTheta)
-    get_all_dpk2_dt_at_t(t) = SVector{NumTheta, Complex{eltype(t)}}(itp_dpk2_dt_real_list[i](t) + im*itp_dpk2_dt_imag_list[i](t) for i=1:NumTheta)
+    t_min, t_max = extrema(t_interp_range)
+    
+    get_all_pk1_at_t(t) = SVector{NumTheta, Complex{eltype(t)}}(itp_pk1_real_list[i](clamp(t, t_min, t_max)) + im*itp_pk1_imag_list[i](clamp(t, t_min, t_max)) for i=1:NumTheta)
+    get_all_dpk1_dt_at_t(t) = SVector{NumTheta, Complex{eltype(t)}}(itp_dpk1_dt_real_list[i](clamp(t, t_min, t_max)) + im*itp_dpk1_dt_imag_list[i](clamp(t, t_min, t_max)) for i=1:NumTheta)
+    get_all_pk2_at_t(t) = SVector{NumTheta, Complex{eltype(t)}}(itp_pk2_real_list[i](clamp(t, t_min, t_max)) + im*itp_pk2_imag_list[i](clamp(t, t_min, t_max)) for i=1:NumTheta)
+    get_all_dpk2_dt_at_t(t) = SVector{NumTheta, Complex{eltype(t)}}(itp_dpk2_dt_real_list[i](clamp(t, t_min, t_max)) + im*itp_dpk2_dt_imag_list[i](clamp(t, t_min, t_max)) for i=1:NumTheta)
+    # get_all_pk1_at_t(t) = SVector{NumTheta, Complex{eltype(t)}}(itp_pk1_real_list[i](t) + im*itp_pk1_imag_list[i](t) for i=1:NumTheta)
+    # get_all_dpk1_dt_at_t(t) = SVector{NumTheta, Complex{eltype(t)}}(itp_dpk1_dt_real_list[i](t) + im*itp_dpk1_dt_imag_list[i](t) for i=1:NumTheta)
+    # get_all_pk2_at_t(t) = SVector{NumTheta, Complex{eltype(t)}}(itp_pk2_real_list[i](t) + im*itp_pk2_imag_list[i](t) for i=1:NumTheta)
+    # get_all_dpk2_dt_at_t(t) = SVector{NumTheta, Complex{eltype(t)}}(itp_dpk2_dt_real_list[i](t) + im*itp_dpk2_dt_imag_list[i](t) for i=1:NumTheta)
 
     # --- Generic setup based on orientation ---
     local ode_func, params_ode, initial_condition_target_func, condition_cb
