@@ -1,9 +1,4 @@
-src/backSweep2.cpp
 output.json
 input.json
 main.asv
-batch_results.csv
-batch_results.mat
 build/
-data/FO_comparison_MD.mat
-data/FO_comparison_SMD.mat
