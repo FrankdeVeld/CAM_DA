@@ -54,68 +54,6 @@ template <typename T> T atan2_mod(T a, T b) {
 }
 
 
-// Helper function for 3x3 matrix determinant
-template<typename T>
-T det3x3(const std::vector<std::vector<T>>& A) {
-    if (A.size() != 3 || A[0].size() != 3 || A[1].size() != 3 || A[2].size() != 3) {
-        throw std::runtime_error("Matrix must be 3x3 for det3x3");
-    }
-    return A[0][0] * (A[1][1] * A[2][2] - A[1][2] * A[2][1]) -
-           A[0][1] * (A[1][0] * A[2][2] - A[1][2] * A[2][0]) +
-           A[0][2] * (A[1][0] * A[2][1] - A[1][1] * A[2][0]);
-}
-
-// Helper function for 3x3 matrix inverse
-// Returns an empty vector if matrix is singular
-template<typename T>
-std::vector<std::vector<T>> inv3x3(const std::vector<std::vector<T>>& A) {
-    if (A.size() != 3 || A[0].size() != 3 || A[1].size() != 3 || A[2].size() != 3) {
-        throw std::runtime_error("Matrix must be 3x3 for inv3x3");
-    }
-
-    T determinant = det3x3(A);
-    // Use a tolerance check for singularity
-    if (std::abs(determinant) < std::numeric_limits<T>::epsilon() * 100) { // Added tolerance
-        return {}; // Return empty vector indicating singularity
-    }
-
-    T invDet = 1.0 / determinant;
-    std::vector<std::vector<T>> invA(3, std::vector<T>(3));
-
-    invA[0][0] = (A[1][1] * A[2][2] - A[1][2] * A[2][1]) * invDet;
-    invA[0][1] = (A[0][2] * A[2][1] - A[0][1] * A[2][2]) * invDet;
-    invA[0][2] = (A[0][1] * A[1][2] - A[0][2] * A[1][1]) * invDet;
-    invA[1][0] = (A[1][2] * A[2][0] - A[1][0] * A[2][2]) * invDet;
-    invA[1][1] = (A[0][0] * A[2][2] - A[0][2] * A[2][0]) * invDet;
-    invA[1][2] = (A[0][2] * A[1][0] - A[0][0] * A[1][2]) * invDet;
-    invA[2][0] = (A[1][0] * A[2][1] - A[1][1] * A[2][0]) * invDet;
-    invA[2][1] = (A[0][1] * A[2][0] - A[0][0] * A[2][1]) * invDet;
-    invA[2][2] = (A[0][0] * A[1][1] - A[0][1] * A[1][0]) * invDet;
-
-    return invA;
-}
-
-// Helper function for vector normalization (returns zero vector if input norm is ~0)
-AlgebraicVector<double> normalizeVector(const AlgebraicVector<double>& v) {
-    double norm_val = v.vnorm();
-    if (norm_val < std::numeric_limits<double>::epsilon() * 100) { // Added tolerance
-        return AlgebraicVector<double>{0.0, 0.0, 0.0}; // Return zero vector
-    }
-    return v / norm_val;
-}
-
-// Helper function for matrix-vector product H_inv * g
-AlgebraicVector<double> matVecProd(const std::vector<std::vector<double>>& A, const AlgebraicVector<double>& v) {
-     if (A.size() != 3 || A[0].size() != 3 || v.size() != 3) {
-        throw std::runtime_error("Matrix must be 3x3 and vector size 3 for matVecProd");
-    }
-    AlgebraicVector<double> result(3);
-    result[0] = A[0][0] * v[0] + A[0][1] * v[1] + A[0][2] * v[2];
-    result[1] = A[1][0] * v[0] + A[1][1] * v[1] + A[1][2] * v[2];
-    result[2] = A[2][0] * v[0] + A[2][1] * v[1] + A[2][2] * v[2];
-    return result;
-}
-
 
 
 template<typename T, typename U>
@@ -572,6 +510,7 @@ tuple<DA, AlgebraicVector<DA>, AlgebraicVector<DA>> tcaInversion(int tCAHandling
     return std::make_tuple(tCA_tn, xp_tCA_DA, xs_tCA_DA);
 }
 
+
 DA Distance_Metric(int DM_Case,AlgebraicVector<DA> DeltaRB, AlgebraicMatrix<DA> P, double R){
     DA DM;
     switch(DM_Case){
@@ -582,10 +521,7 @@ DA Distance_Metric(int DM_Case,AlgebraicVector<DA> DeltaRB, AlgebraicMatrix<DA> 
         }
         case 2: // SMD
         {
-            AlgebraicVector<DA> DeltaRBRightComp(2);
-            DeltaRBRightComp[0] = DeltaRB[0];
-            DeltaRBRightComp[1] = DeltaRB[2];
-            DM = dot(DeltaRBRightComp,P.inv() * DeltaRBRightComp);
+            DM = dot(DeltaRB,P.inv() * DeltaRB);
             break;
         }
         default: // Handle unexpected DM_Case values
