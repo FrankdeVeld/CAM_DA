@@ -22,9 +22,9 @@ params = struct( ...
     'md_lim_dim',         2, ...    % km MD limit
     'pocLim',             1e-6, ... % - PoC limit
     'nx_orb',             120, ...  % Number of nodes per orbit
-    'n_orb',              0.7, ...    % Number of orbits before TCA
+    'n_orb',              0.3, ...    % Number of orbits before TCA
     'n_orb_start',        0, ...    % Number of orbits before TCA (redundant)
-    'metric_case',        1, ...    % 1: miss distance, 2: SMD
+    'metric_case',        2, ...    % 1: miss distance, 2: SMD
     'order',              2, ...    % DA order (between 2 and 6)
     'tCAHandling',        2, ...    % 0: Fix (not working), 1: DA, 2: Picard-Lindelhof
     'refineLastInterval', 1 ...     % 0: no, 1: yes
