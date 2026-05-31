@@ -572,23 +572,6 @@ tuple<DA, AlgebraicVector<DA>, AlgebraicVector<DA>> tcaInversion(int tCAHandling
     return std::make_tuple(tCA_tn, xp_tCA_DA, xs_tCA_DA);
 }
 
-double FilePrintTTSSimple(string SaveName, int NumPoints, AlgebraicMatrix<double> xpf_save_mat, AlgebraicMatrix<double> xsf_save_mat, AlgebraicVector<double> tf_save_vec){
-    int i;
-    int j;
-    ofstream xp, xs, tf;
-    string xpFileName = "./write_read/xpf_" + SaveName + ".dat";
-    xp.open(xpFileName);
-    xp << setprecision(16);
-    for (i=0; i<NumPoints; i++)
-    {
-        for(j=0; j<6;j++)
-        {
-            xp << xpf_save_mat.at(i,j) << " ";
-        }
-        xp << endl;
-    }
-    xp.close();
-
 DA Distance_Metric(int DM_Case,AlgebraicVector<DA> DeltaRB, AlgebraicMatrix<DA> P, double R){
     DA DM;
     switch(DM_Case){

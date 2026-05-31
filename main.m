@@ -32,7 +32,7 @@ params = struct( ...
 params.ctrlMax_dim = params.thrust/1e6/params.mass; % km/s^2 control magnitude 
 
 % Scenario definition
-[primary,secondary] = generateInitShort(184);
+[primary,secondary] = generateInitShort(1);
 % [primary,secondary] = readCDM_CONGEN();
 % Nondimensionalisation of the initial conditions and parameters
 scenario            = nondimensionalise(primary,secondary,params);
