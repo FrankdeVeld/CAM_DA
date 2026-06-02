@@ -77,8 +77,9 @@ This compiles the C++ backend using CMake within WSL and generates the necessary
 
 **Zeno Pavanello**  
 E-mail: zeno.pavanello@polimi.it  
-**Frank De Veld**
-E-mail: frankdeveld@proton.me
+
+**Frank De Veld**   
+E-mail: frankdeveld@proton.me   
 Date: 2022–2026
 
 ## Compatibility
