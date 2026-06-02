@@ -4,13 +4,7 @@ A complete software framework for computing the latest possible initiation time 
 
 ## Overview
 
-SCP CAM uses successive convexification to optimize trajectories that avoid collisions while minimizing fuel consumption. The system supports:
-
-- **Single and multiple secondary objects**
-- **LEO and GEO orbits**
-- **Short-term and long-term conjunctions**
-- **Station-keeping and operational constraints**
-- **Advanced environment models** (atmosphere, SRP, third-body perturbations)
+GTO CAM uses a greedy approach to minimize the initiation time of a maneuver before conjunction.
 
 ## System Requirements
 
