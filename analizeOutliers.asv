@@ -1,0 +1,19 @@
+clear
+close all
+clc
+
+load('data/batch_results_md.mat');
+t_thrust = -load('data/Julia_OC_Results_t0.csv');
+diff = abs(start_time-t_thrust);
+diff_prc = diff./start_time;
+% outliers = more_than(diff,95);
+% outliers_prc = more_than(diff_prc,95);
+[a,b] = sort(diff_prc);
+idx = b(end-1);
+
+u = [uT_all{idx} uR_all{idx} uN_all{idx}];
+
+plot(u)
+plot(sort(more_than(diff_prc,99.5)))
+
+plot(sodiff_prc,start_time)

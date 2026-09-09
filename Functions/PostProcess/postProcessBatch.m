@@ -123,21 +123,21 @@ axis tight
 xlabel('Orbits before TCA')
 ylabel('MD relative error')
 xlim([0,0.65])
-
-%% FO SMD
-load('data/FO_comparison_SMD.mat')
-col = [0, 0.4470, 0.7410];
-
-f6 = figure(f6);
-plot_cdf(t_thrust,col,'--')
-
-
-%% FO MD
-load('data/FO_comparison_MD.mat')
-col = [0.8500, 0.3250, 0.0980];
- 
-f6 = figure(f6);
-plot_cdf(t_thrust,col,'--')
+% 
+% %% FO SMD
+% load('data/FO_comparison_SMD.mat')
+% col = [0, 0.4470, 0.7410];
+% 
+% f6 = figure(f6);
+% plot_cdf(t_thrust,col,'--')
+% 
+% 
+% %% FO MD
+% load('data/FO_comparison_MD.mat')
+% col = [0.8500, 0.3250, 0.0980];
+% 
+% f6 = figure(f6);
+% plot_cdf(t_thrust,col,'--')
 
 %% OCP time optimal
 t_thrust = -load('data/Julia_OC_Results_t0.csv');
@@ -182,10 +182,4 @@ saveFigurePDF(f9, 'Figures/control_md', 15, 10, 'centimeters')
 saveFigurePDF(f10, 'Figures/error_md', 15, 6, 'centimeters')
 saveFigurePDF(f11, 'Figures/error_t0', 15, 6, 'centimeters')
 close all
-end
-
-function out = less_than(in,prc)
-    in  = in(:);
-    in  = in(~isnan(in));
-    out = in(in<prctile(in,prc));
 end
