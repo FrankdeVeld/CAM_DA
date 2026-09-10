@@ -12,8 +12,10 @@ set(0,'DefaultUipanelFontName','Times', 'DefaultUipanelFontSize', 16);
 
 set(0, 'DefaultLineLineWidth', 1);
 set(0,'defaultfigurecolor',[1 1 1])
-    
+
 %% Initialisation
+outliers = [183;423;441;481;522;677;740;812;817;1041;1080;1137;1203;1262;1279;1327;1343;1356;1774;1880;1894];
+for j = 1:length(outliers)
 %Parameters
 params = struct( ...
     'mass',               800, ...  % kg (Starlink v2)
@@ -31,7 +33,7 @@ params = struct( ...
 params.ctrlMax_dim = params.thrust/1e6/params.mass; % km/s^2 control magnitude 
 
 % Scenario definition
-[primary,secondary] = generateInitShort(10);
+[primary,secondary] = generateInitShort(outliers(j));
 % [primary,secondary] = readCDM_CONGEN();
 % Nondimensionalisation of the initial conditions and parameters
 scenario            = nondimensionalise(primary,secondary,params);
@@ -50,3 +52,4 @@ validation = validateBackSweep(input,outSim);
 
 %% Postprocessing
 mainPostprocess(outSim, validation, scenario, input, params)
+end
